@@ -155,6 +155,7 @@ frappe.ui.form.on("Leave Allocation", {
 			);
 		}
 	},
+
 	calculate_total_leaves_allocated: function (frm) {
 		if (cint(frm.doc.carry_forward) == 1 && frm.doc.leave_type && frm.doc.employee) {
 			return frappe.call({

@@ -3,8 +3,6 @@ from frappe.tests.utils import FrappeTestCase
 from frappe.utils import (
 	add_days,
 	add_months,
-	date_diff,
-	flt,
 	get_first_day,
 	get_last_day,
 	get_year_ending,

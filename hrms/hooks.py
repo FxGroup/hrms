@@ -210,7 +210,7 @@ accounting_dimension_doctypes = [
 	"Payroll Entry",
 ]
 
-bank_reconciliation_doctypes = ["Expense Claim"]
+# bank_reconciliation_doctypes = ["Expense Claim"]
 
 # Testing
 # -------

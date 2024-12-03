@@ -34,6 +34,7 @@ from hrms.hr.utils import (
 )
 from hrms.mixins.pwa_notifications import PWANotificationsMixin
 from hrms.utils import get_employee_email
+from fxnmrnth import get_site_name
 
 
 class LeaveDayBlockedError(frappe.ValidationError):
@@ -69,6 +70,26 @@ class LeaveApplication(Document, PWANotificationsMixin):
 
 	def after_insert(self):
 		self.notify_approver()
+		try:
+			site = get_site_name()
+			url = "https://{0}/app/leave-application/{1}".format(site, self.name)
+			applicant_name = self.employee_name
+			applicant_email = frappe.db.get_value("Employee", self.employee, "user_id", cache=True)
+			subject = _("Leave apllication for {0}").format(applicant_name)
+			message = _(
+				"{0} has applied for {1}."
+				"<br><br>"
+				"You can find the application here: <a href='{2}' target='_blank'>{2}</a>"
+			).format(applicant_name, self.leave_type, url)
+			frappe.sendmail(
+				recipients=[self.leave_approver, applicant_email],
+				subject=subject,
+				message=message
+			)
+		except Exception as e:
+			frappe.log_error(message=str(e), title="Leave Application Email Error")
+			frappe.msgprint(_("Email unable to be sent. Please notify leave approver manually"))
+
 
 	def validate(self):
 		validate_active_employee(self.employee)
@@ -80,7 +101,7 @@ class LeaveApplication(Document, PWANotificationsMixin):
 		self.show_block_day_warning()
 		self.validate_block_days()
 		self.validate_salary_processed_days()
-		self.validate_attendance()
+		# self.validate_attendance()
 		self.set_half_day_date()
 		if frappe.db.get_value("Leave Type", self.leave_type, "is_optional_leave"):
 			self.validate_optional_leave()
@@ -101,7 +122,7 @@ class LeaveApplication(Document, PWANotificationsMixin):
 			frappe.throw(_("Only Leave Applications with status 'Approved' and 'Rejected' can be submitted"))
 
 		self.validate_back_dated_application()
-		self.update_attendance()
+		# self.update_attendance()
 
 		# notify leave applier about approval
 		if frappe.db.get_single_value("HR Settings", "send_leave_notification"):
@@ -118,7 +139,7 @@ class LeaveApplication(Document, PWANotificationsMixin):
 		# notify leave applier about cancellation
 		if frappe.db.get_single_value("HR Settings", "send_leave_notification"):
 			self.notify_employee()
-		self.cancel_attendance()
+		# self.cancel_attendance()
 
 		self.publish_update()
 
@@ -243,67 +264,67 @@ class LeaveApplication(Document, PWANotificationsMixin):
 				).format(formatdate(future_allocation[0].from_date), future_allocation[0].name)
 			)
 
-	def update_attendance(self):
-		if self.status != "Approved":
-			return
+	# def update_attendance(self):
+	# 	if self.status != "Approved":
+	# 		return
 
-		holiday_dates = []
-		if not frappe.db.get_value("Leave Type", self.leave_type, "include_holiday"):
-			holiday_dates = get_holiday_dates_for_employee(self.employee, self.from_date, self.to_date)
+	# 	holiday_dates = []
+	# 	if not frappe.db.get_value("Leave Type", self.leave_type, "include_holiday"):
+	# 		holiday_dates = get_holiday_dates_for_employee(self.employee, self.from_date, self.to_date)
 
-		for dt in daterange(getdate(self.from_date), getdate(self.to_date)):
-			date = dt.strftime("%Y-%m-%d")
-			attendance_name = frappe.db.exists(
-				"Attendance", dict(employee=self.employee, attendance_date=date, docstatus=("!=", 2))
-			)
+	# 	for dt in daterange(getdate(self.from_date), getdate(self.to_date)):
+	# 		date = dt.strftime("%Y-%m-%d")
+	# 		attendance_name = frappe.db.exists(
+	# 			"Attendance", dict(employee=self.employee, attendance_date=date, docstatus=("!=", 2))
+	# 		)
 
-			# don't mark attendance for holidays
-			# if leave type does not include holidays within leaves as leaves
-			if date in holiday_dates:
-				if attendance_name:
-					# cancel and delete existing attendance for holidays
-					attendance = frappe.get_doc("Attendance", attendance_name)
-					attendance.flags.ignore_permissions = True
-					if attendance.docstatus == 1:
-						attendance.cancel()
-					frappe.delete_doc("Attendance", attendance_name, force=1)
-				continue
+	# 		# don't mark attendance for holidays
+	# 		# if leave type does not include holidays within leaves as leaves
+	# 		if date in holiday_dates:
+	# 			if attendance_name:
+	# 				# cancel and delete existing attendance for holidays
+	# 				attendance = frappe.get_doc("Attendance", attendance_name)
+	# 				attendance.flags.ignore_permissions = True
+	# 				if attendance.docstatus == 1:
+	# 					attendance.cancel()
+	# 				frappe.delete_doc("Attendance", attendance_name, force=1)
+	# 			continue
 
-			self.create_or_update_attendance(attendance_name, date)
+	# 		self.create_or_update_attendance(attendance_name, date)
 
-	def create_or_update_attendance(self, attendance_name, date):
-		status = (
-			"Half Day" if self.half_day_date and getdate(date) == getdate(self.half_day_date) else "On Leave"
-		)
+	# def create_or_update_attendance(self, attendance_name, date):
+	# 	status = (
+	# 		"Half Day" if self.half_day_date and getdate(date) == getdate(self.half_day_date) else "On Leave"
+	# 	)
 
-		if attendance_name:
-			# update existing attendance, change absent to on leave
-			doc = frappe.get_doc("Attendance", attendance_name)
-			doc.db_set({"status": status, "leave_type": self.leave_type, "leave_application": self.name})
-		else:
-			# make new attendance and submit it
-			doc = frappe.new_doc("Attendance")
-			doc.employee = self.employee
-			doc.employee_name = self.employee_name
-			doc.attendance_date = date
-			doc.company = self.company
-			doc.leave_type = self.leave_type
-			doc.leave_application = self.name
-			doc.status = status
-			doc.flags.ignore_validate = True
-			doc.insert(ignore_permissions=True)
-			doc.submit()
+	# 	if attendance_name:
+	# 		# update existing attendance, change absent to on leave
+	# 		doc = frappe.get_doc("Attendance", attendance_name)
+	# 		doc.db_set({"status": status, "leave_type": self.leave_type, "leave_application": self.name})
+	# 	else:
+	# 		# make new attendance and submit it
+	# 		doc = frappe.new_doc("Attendance")
+	# 		doc.employee = self.employee
+	# 		doc.employee_name = self.employee_name
+	# 		doc.attendance_date = date
+	# 		doc.company = self.company
+	# 		doc.leave_type = self.leave_type
+	# 		doc.leave_application = self.name
+	# 		doc.status = status
+	# 		doc.flags.ignore_validate = True
+	# 		doc.insert(ignore_permissions=True)
+	# 		doc.submit()
 
-	def cancel_attendance(self):
-		if self.docstatus == 2:
-			attendance = frappe.db.sql(
-				"""select name from `tabAttendance` where employee = %s\
-				and (attendance_date between %s and %s) and docstatus < 2 and status in ('On Leave', 'Half Day')""",
-				(self.employee, self.from_date, self.to_date),
-				as_dict=1,
-			)
-			for name in attendance:
-				frappe.db.set_value("Attendance", name, "docstatus", 2)
+	# def cancel_attendance(self):
+	# 	if self.docstatus == 2:
+	# 		attendance = frappe.db.sql(
+	# 			"""select name from `tabAttendance` where employee = %s\
+	# 			and (attendance_date between %s and %s) and docstatus < 2 and status in ('On Leave', 'Half Day')""",
+	# 			(self.employee, self.from_date, self.to_date),
+	# 			as_dict=1,
+	# 		)
+	# 		for name in attendance:
+	# 			frappe.db.set_value("Attendance", name, "docstatus", 2)
 
 	def validate_salary_processed_days(self):
 		if not frappe.db.get_value("Leave Type", self.leave_type, "is_lwp"):
@@ -379,10 +400,10 @@ class LeaveApplication(Document, PWANotificationsMixin):
 				self.leave_balance = leave_balance.get("leave_balance")
 				leave_balance_for_consumption = leave_balance.get("leave_balance_for_consumption")
 
-				if self.status != "Rejected" and (
-					leave_balance_for_consumption < self.total_leave_days or not leave_balance_for_consumption
-				):
-					self.show_insufficient_balance_message(leave_balance_for_consumption)
+				# if self.status != "Rejected" and (
+				# 	leave_balance_for_consumption < self.total_leave_days or not leave_balance_for_consumption
+				# ):
+				# 	self.show_insufficient_balance_message(leave_balance_for_consumption)
 
 	def show_insufficient_balance_message(self, leave_balance_for_consumption: float) -> None:
 		alloc_on_from_date, alloc_on_to_date = self.get_allocation_based_on_application_dates()
@@ -543,17 +564,17 @@ class LeaveApplication(Document, PWANotificationsMixin):
 			}
 		)
 
-	def validate_attendance(self):
-		attendance = frappe.db.sql(
-			"""select name from `tabAttendance` where employee = %s and (attendance_date between %s and %s)
-					and status = 'Present' and docstatus = 1""",
-			(self.employee, self.from_date, self.to_date),
-		)
-		if attendance:
-			frappe.throw(
-				_("Attendance for employee {0} is already marked for this day").format(self.employee),
-				AttendanceAlreadyMarkedError,
-			)
+	# def validate_attendance(self):
+	# 	attendance = frappe.db.sql(
+	# 		"""select name from `tabAttendance` where employee = %s and (attendance_date between %s and %s)
+	# 				and status = 'Present' and docstatus = 1""",
+	# 		(self.employee, self.from_date, self.to_date),
+	# 	)
+	# 	if attendance:
+	# 		frappe.throw(
+	# 			_("Attendance for employee {0} is already marked for this day").format(self.employee),
+	# 			AttendanceAlreadyMarkedError,
+	# 		)
 
 	def validate_optional_leave(self):
 		leave_period = get_leave_period(self.from_date, self.to_date, self.company)

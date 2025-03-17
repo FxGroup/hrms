@@ -117,7 +117,7 @@
    "label": "New Leaves Allocated"
   },
   {
-   "default": "0",
+   "default": "1",
    "fieldname": "carry_forward",
    "fieldtype": "Check",
    "label": "Add unused leaves from previous allocations"

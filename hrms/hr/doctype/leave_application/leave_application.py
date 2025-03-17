@@ -70,6 +70,9 @@ class LeaveApplication(Document, PWANotificationsMixin):
 
 	def after_insert(self):
 		self.notify_approver()
+		user = frappe.session.user
+		if user == "Administrator":
+			user = "it@rnlabs.com.au"
 		try:
 			site = get_site_name()
 			url = "https://{0}/app/leave-application/{1}".format(site, self.name)
@@ -83,6 +86,7 @@ class LeaveApplication(Document, PWANotificationsMixin):
 			).format(applicant_name, self.leave_type, url)
 			frappe.sendmail(
 				recipients=[self.leave_approver, applicant_email],
+				sender = applicant_email,
 				subject=subject,
 				message=message
 			)
@@ -127,6 +131,10 @@ class LeaveApplication(Document, PWANotificationsMixin):
 		# notify leave applier about approval
 		if frappe.db.get_single_value("HR Settings", "send_leave_notification"):
 			self.notify_employee()
+
+		# notify accounts if approved
+		if self.status =="Approved":
+			self.notify_accounts()
 
 		self.create_leave_ledger_entry()
 		self.reload()
@@ -656,6 +664,29 @@ class LeaveApplication(Document, PWANotificationsMixin):
 					"subject": subject,
 				}
 			)
+	def notify_accounts(self):
+		try:
+			site = get_site_name()
+			url = "https://{0}/app/leave-application/{1}".format(site, self.name)
+			applicant_name = self.employee_name
+			approver_email = self.leave_approver
+			applicant_email = frappe.db.get_value("Employee", self.employee, "user_id", cache=True)
+			subject = _("Leave approval for {0}").format(applicant_name)
+			message = _(
+				"{0} {1} has been approved."
+				"<br><br>"
+				"You can find the application here: <a href='{2}' target='_blank'>{2}</a>"
+			).format(applicant_name, self.leave_type, url)
+			frappe.sendmail(
+				recipients=["jyotsana@fxmed.co.nz", "ricky@fxmed.co.nz", applicant_email],
+				sender = approver_email,
+				subject=subject,
+				message=message
+			)
+		except Exception as e:
+			frappe.log_error(message=str(e), title="Leave Approval Email Error")
+			frappe.msgprint(_("Email unable to be sent. Please notify accounts manually"))
+
 
 	def notify(self, args):
 		args = frappe._dict(args)

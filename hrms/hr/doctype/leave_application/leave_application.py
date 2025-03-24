@@ -875,24 +875,40 @@ def get_number_of_leave_days(
 	half_day: int | str | None = None,
 	half_day_date: datetime.date | str | None = None,
 	holiday_list: str | None = None,
+	partial_hours_leave: str | int | None = None
 ) -> float:
 	"""Returns number of leave days between 2 dates after considering half day and holidays
 	(Based on the include_holiday setting in Leave Type)"""
-	number_of_days = 0
-	if cint(half_day) == 1:
-		if getdate(from_date) == getdate(to_date):
-			number_of_days = 0.5
-		elif half_day_date and getdate(from_date) <= getdate(half_day_date) <= getdate(to_date):
-			number_of_days = date_diff(to_date, from_date) + 0.5
+
+	from_date = getdate(from_date)
+	to_date = getdate(to_date)
+	half_day = cint(half_day)
+	partial_hours = 0.0
+
+	if half_day == 1:
+		if partial_hours_leave is not None:
+			try:
+				partial_hours = float(partial_hours_leave) / 8.0
+			except (ValueError, TypeError):
+				partial_hours = 0.0
+			partial_hours = max(0.0, min(partial_hours, 1.0))
 		else:
-			number_of_days = date_diff(to_date, from_date) + 1
+			partial_hours = 0.5
+
+		if from_date == to_date:
+			number_of_days = partial_hours
+		elif half_day_date and from_date <= getdate(half_day_date) <= to_date:
+			number_of_days = date_diff(to_date, from_date) + partial_hours
+		else:
+			number_of_days = date_diff(to_date, from_date) + 1.0
 	else:
-		number_of_days = date_diff(to_date, from_date) + 1
+		number_of_days = date_diff(to_date, from_date) + 1.0
 
 	if not frappe.db.get_value("Leave Type", leave_type, "include_holiday"):
-		number_of_days = flt(number_of_days) - flt(
-			get_holidays(employee, from_date, to_date, holiday_list=holiday_list)
-		)
+		holidays = flt(get_holidays(employee, from_date, to_date, holiday_list=holiday_list))
+		number_of_days = flt(number_of_days) - holidays
+		number_of_days = max(0.0, number_of_days)
+
 	return number_of_days
 
 

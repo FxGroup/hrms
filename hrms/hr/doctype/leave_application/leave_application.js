@@ -17,6 +17,8 @@ frappe.ui.form.on("Leave Application", {
 	},
 
 	onload: function (frm) {
+		frm.toggle_display('section_break_7', frappe.user.has_role("Leave Approver") || frappe.user.has_role("HR Manager"));
+		
 		// Ignore cancellation of doctype on cancel all.
 		frm.ignore_doctypes_on_cancel_all = ["Leave Ledger Entry"];
 
@@ -111,9 +113,9 @@ frappe.ui.form.on("Leave Application", {
 		}
 
 		frm.trigger("set_employee");
-		if (frm.doc.docstatus === 0) {
-			frm.trigger("make_dashboard");
-		}
+		// if (frm.doc.docstatus === 0) {
+		// 	frm.trigger("make_dashboard");
+		// }
 	},
 
 	async set_employee(frm) {
@@ -126,7 +128,7 @@ frappe.ui.form.on("Leave Application", {
 	},
 
 	employee: function (frm) {
-		frm.trigger("make_dashboard");
+		//frm.trigger("make_dashboard");
 		frm.trigger("get_leave_balance");
 		frm.trigger("set_leave_approver");
 	},
@@ -151,24 +153,47 @@ frappe.ui.form.on("Leave Application", {
 		} else {
 			frm.set_value("half_day_date", "");
 		}
+
 		frm.trigger("calculate_total_days");
 	},
 
 	from_date: function (frm) {
 		frm.events.validate_from_to_date(frm, "to_date");
-		frm.trigger("make_dashboard");
+		//frm.trigger("make_dashboard");
 		frm.trigger("half_day_datepicker");
 		frm.trigger("calculate_total_days");
 	},
 
 	to_date: function (frm) {
 		frm.events.validate_from_to_date(frm, "from_date");
-		frm.trigger("make_dashboard");
+		//frm.trigger("make_dashboard");
 		frm.trigger("half_day_datepicker");
 		frm.trigger("calculate_total_days");
 	},
 
 	half_day_date(frm) {
+		frm.toggle_display('partial_hours_leave', frm.doc.half_day);
+		frm.toggle_reqd('partial_hours_leave', frm.doc.half_day);
+
+		frm.trigger("calculate_total_days");
+	},
+
+	partial_hours_leave(frm) {
+		let val = frm.doc.partial_hours_leave;
+
+		if (val !== undefined && val !== null) {
+			val = parseInt(val);
+
+			if (isNaN(val) || val <= 0) {
+				frappe.msgprint(__('Please enter a positive whole number for Partial Hours Leave.'));
+				frm.set_value('partial_hours_leave', null);
+			} else {
+				frm.set_value('partial_hours_leave', val);  
+			}
+		} else {
+			console.log(`Partial Leave Hours: ${frm.doc.partial_hours_leave}`)
+		}
+ 
 		frm.trigger("calculate_total_days");
 	},
 
@@ -229,6 +254,7 @@ frappe.ui.form.on("Leave Application", {
 					to_date: frm.doc.to_date,
 					half_day: frm.doc.half_day,
 					half_day_date: frm.doc.half_day_date,
+					partial_hours_leave: frm.doc.partial_hours_leave || 0,
 				},
 				callback: function (r) {
 					if (r && r.message) {

@@ -1,6 +1,7 @@
 hrms.leave_utils = {
 	add_view_ledger_button(frm) {
 		if (frm.doc.__islocal || frm.doc.docstatus != 1) return;
+		if (!frappe.user.has_role(["Administrator", "HR Manager", "Leave Approver"])) return;
 
 		frm.add_custom_button(__("View Ledger"), () => {
 			frappe.route_options = {

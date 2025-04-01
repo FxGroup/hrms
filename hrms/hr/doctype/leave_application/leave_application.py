@@ -135,6 +135,9 @@ class LeaveApplication(Document, PWANotificationsMixin):
 		# notify accounts if approved
 		if self.status =="Approved":
 			self.notify_accounts()
+   
+		if self.status == "Rejected":
+			self.notify_employee()
 
 		self.create_leave_ledger_entry()
 		self.reload()
@@ -628,7 +631,6 @@ class LeaveApplication(Document, PWANotificationsMixin):
 		email_template = frappe.get_doc("Email Template", template)
 		subject = frappe.render_template(email_template.subject, args)
 		message = frappe.render_template(email_template.response_, args)
-
 		self.notify(
 			{
 				# for post in messages

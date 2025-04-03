@@ -21,6 +21,7 @@ from frappe.utils import (
 
 from erpnext.buying.doctype.supplier_scorecard.supplier_scorecard import daterange
 from erpnext.setup.doctype.employee.employee import get_holiday_list_for_employee
+from erpnext import get_default_company
 
 import hrms
 from hrms.hr.doctype.leave_block_list.leave_block_list import get_applicable_block_dates
@@ -69,7 +70,7 @@ class LeaveApplication(Document, PWANotificationsMixin):
 		return _("{0}: From {0} of type {1}").format(self.employee_name, self.leave_type)
 
 	def after_insert(self):
-		self.notify_approver()
+		sender_email = get_email()
 		user = frappe.session.user
 		if user == "Administrator":
 			user = "it@rnlabs.com.au"
@@ -86,7 +87,7 @@ class LeaveApplication(Document, PWANotificationsMixin):
 			).format(applicant_name, self.leave_type, url)
 			frappe.sendmail(
 				recipients=[self.leave_approver, applicant_email],
-				sender = applicant_email,
+				sender = sender_email,
 				subject=subject,
 				message=message
 			)
@@ -679,11 +680,12 @@ class LeaveApplication(Document, PWANotificationsMixin):
 				"<br><br>"
 				"You can find the application here: <a href='{2}' target='_blank'>{2}</a>"
 			).format(applicant_name, self.leave_type, url)
-			frappe.sendmail(
-				recipients=["jyotsana@fxmed.co.nz", "ricky@fxmed.co.nz", applicant_email],
-				sender = approver_email,
-				subject=subject,
-				message=message
+			self.notify(
+				{
+					"message_to": ["jyotsana@fxmed.co.nz", "ricky@fxmed.co.nz", applicant_email, approver_email],
+					"subject":subject,
+					"message": message
+				}
 			)
 		except Exception as e:
 			frappe.log_error(message=str(e), title="Leave Approval Email Error")
@@ -699,19 +701,17 @@ class LeaveApplication(Document, PWANotificationsMixin):
 				if not args.notify == "employee":
 					contact = frappe.get_doc("User", contact).email or contact
 
-			sender = dict()
-			sender["email"] = frappe.get_doc("User", frappe.session.user).email
-			sender["full_name"] = get_fullname(sender["email"])
-
+			sender_email = get_email()
 			try:
 				frappe.sendmail(
 					recipients=contact,
-					sender=sender["email"],
+					sender=sender_email,
 					subject=args.subject,
 					message=args.message,
 				)
 				frappe.msgprint(_("Email sent to {0}").format(contact))
 			except frappe.OutgoingEmailError:
+				frappe.msgprint("Email unable to be sent. Please notify relevant parties directly")
 				pass
 
 	def create_leave_ledger_entry(self, submit=True):
@@ -1272,6 +1272,12 @@ def get_events(start, end, filters=None):
 	add_holidays(events, start, end, employee, company)
 
 	return events
+
+def get_email():
+	company = get_default_company()
+	if company == "RN Labs" or company == "Therahealth":
+		return "hr@rnlabs.com.au"
+	return "hr@fxmed.co.nz"
 
 
 def add_department_leaves(events, start, end, employee, company):

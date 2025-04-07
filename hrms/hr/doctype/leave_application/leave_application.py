@@ -79,7 +79,7 @@ class LeaveApplication(Document, PWANotificationsMixin):
 			url = "https://{0}/app/leave-application/{1}".format(site, self.name)
 			applicant_name = self.employee_name
 			applicant_email = frappe.db.get_value("Employee", self.employee, "user_id", cache=True)
-			subject = _("Leave apllication for {0}").format(applicant_name)
+			subject = _("Leave application for {0}").format(applicant_name)
 			message = _(
 				"{0} has applied for {1}."
 				"<br><br>"

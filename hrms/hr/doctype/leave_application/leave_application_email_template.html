@@ -1,3 +1,4 @@
+{% set doc_link = frappe.utils.get_url_to_form('Leave Application', name) %}
 <h1>Leave Application Notification</h1>
 <h3>Details:</h3>
 
@@ -22,9 +23,12 @@
 			<td>Status</td>
 			<td>{{status}}</td>
 		</tr>
+		<tr>
+			<td>Link</td>
+			<td><a class="btn btn-primary" href="{{ doc_link }}" target="_blank">{{ _('Open Now') }}</a></td>
+		</tr>
 	</table>
 
-	{% set doc_link = frappe.utils.get_url_to_form('Leave Application', name) %}
+	
 
 	<br><br>
-	<a class="btn btn-primary" href="{{ doc_link }}" target="_blank">{{ _('Open Now') }}</a>

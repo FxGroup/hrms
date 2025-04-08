@@ -675,6 +675,11 @@ class LeaveApplication(Document, PWANotificationsMixin):
 			approver_email = self.leave_approver
 			applicant_email = frappe.db.get_value("Employee", self.employee, "user_id", cache=True)
 			subject = _("Leave approval for {0}").format(applicant_name)
+			company = get_default_company()
+			if (company == "RN Labs" or company == "Therahealth") and approver_email != "nerisse@rnlabs.com.au":
+				message_rec = ["jyotsana@fxmed.co.nz", "ricky@fxmed.co.nz", "nerisse@rnlabs.com.au", applicant_email, approver_email]
+			else:
+				message_rec = ["jyotsana@fxmed.co.nz", "ricky@fxmed.co.nz", applicant_email, approver_email]
 			message = _(
 				"{0} {1} has been approved."
 				"<br><br>"
@@ -682,7 +687,7 @@ class LeaveApplication(Document, PWANotificationsMixin):
 			).format(applicant_name, self.leave_type, url)
 			self.notify(
 				{
-					"message_to": ["jyotsana@fxmed.co.nz", "ricky@fxmed.co.nz", applicant_email, approver_email],
+					"message_to": message_rec,
 					"subject":subject,
 					"message": message
 				}
@@ -870,48 +875,53 @@ def get_allocation_expiry_for_cf_leaves(
 
 @frappe.whitelist()
 def get_number_of_leave_days(
-	employee: str,
-	leave_type: str,
-	from_date: datetime.date,
-	to_date: datetime.date,
-	half_day: int | str | None = None,
-	half_day_date: datetime.date | str | None = None,
-	holiday_list: str | None = None,
-	partial_hours_leave: str | int | None = None
+    employee: str,
+    leave_type: str,
+    from_date: datetime.date,
+    to_date: datetime.date,
+    half_day: int | str | None = None,
+    half_day_date: datetime.date | str | None = None,
+    holiday_list: str | None = None,
+    partial_hours_leave: str | int | None = None,
+    partial_minutes_leave: str | int | None = None
 ) -> float:
-	"""Returns number of leave days between 2 dates after considering half day and holidays
-	(Based on the include_holiday setting in Leave Type)"""
+    """Returns number of leave days between 2 dates after considering half day, holidays, and partial hours/minutes.
+    partial_minutes_leave can be 0, 15, 30, 45.
+    """
+    from_date = getdate(from_date)
+    to_date = getdate(to_date)
+    half_day = cint(half_day)
+    partial_hours = 0.0
 
-	from_date = getdate(from_date)
-	to_date = getdate(to_date)
-	half_day = cint(half_day)
-	partial_hours = 0.0
+    if half_day == 1:
+        if partial_hours_leave is not None or partial_minutes_leave is not None:
+            try:
+                partial_hours = flt(partial_hours_leave) if partial_hours_leave else 0.0
+                partial_minutes = flt(partial_minutes_leave) if partial_minutes_leave else 0.0
+                partial_hours += partial_minutes / 60.0
+                partial_hours = partial_hours / 8.0
+            except (ValueError, TypeError):
+                partial_hours = 0.0
 
-	if half_day == 1:
-		if partial_hours_leave is not None:
-			try:
-				partial_hours = float(partial_hours_leave) / 8.0
-			except (ValueError, TypeError):
-				partial_hours = 0.0
-			partial_hours = max(0.0, min(partial_hours, 1.0))
-		else:
-			partial_hours = 0.5
+            partial_hours = max(0.0, min(partial_hours, 1.0))
+        else:
+            partial_hours = 0.5
 
-		if from_date == to_date:
-			number_of_days = partial_hours
-		elif half_day_date and from_date <= getdate(half_day_date) <= to_date:
-			number_of_days = date_diff(to_date, from_date) + partial_hours
-		else:
-			number_of_days = date_diff(to_date, from_date) + 1.0
-	else:
-		number_of_days = date_diff(to_date, from_date) + 1.0
+        if from_date == to_date:
+            number_of_days = partial_hours
+        elif half_day_date and from_date <= getdate(half_day_date) <= to_date:
+            number_of_days = date_diff(to_date, from_date) + partial_hours
+        else:
+            number_of_days = date_diff(to_date, from_date) + 1.0
+    else:
+        number_of_days = date_diff(to_date, from_date) + 1.0
 
-	if not frappe.db.get_value("Leave Type", leave_type, "include_holiday"):
-		holidays = flt(get_holidays(employee, from_date, to_date, holiday_list=holiday_list))
-		number_of_days = flt(number_of_days) - holidays
-		number_of_days = max(0.0, number_of_days)
+    if not frappe.db.get_value("Leave Type", leave_type, "include_holiday"):
+        holidays = flt(get_holidays(employee, from_date, to_date, holiday_list=holiday_list))
+        number_of_days = flt(number_of_days) - holidays
+        number_of_days = max(0.0, number_of_days)
 
-	return number_of_days
+    return number_of_days
 
 
 @frappe.whitelist()

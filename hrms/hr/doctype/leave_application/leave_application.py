@@ -70,26 +70,17 @@ class LeaveApplication(Document, PWANotificationsMixin):
 		return _("{0}: From {0} of type {1}").format(self.employee_name, self.leave_type)
 
 	def after_insert(self):
-		sender_email = get_email()
 		user = frappe.session.user
 		if user == "Administrator":
 			user = "it@rnlabs.com.au"
 		try:
-			site = get_site_name()
-			url = "https://{0}/app/leave-application/{1}".format(site, self.name)
-			applicant_name = self.employee_name
 			applicant_email = frappe.db.get_value("Employee", self.employee, "user_id", cache=True)
-			subject = _("Leave application for {0}").format(applicant_name)
-			message = _(
-				"{0} has applied for {1}."
-				"<br><br>"
-				"You can find the application here: <a href='{2}' target='_blank'>{2}</a>"
-			).format(applicant_name, self.leave_type, url)
-			frappe.sendmail(
-				recipients=[self.leave_approver, applicant_email],
-				sender = sender_email,
-				subject=subject,
-				message=message
+			subject = f"Leave application for {self.employee_name}"
+			self.notify(
+				{
+					"message_to": [applicant_email,self.leave_approver],
+					"subject": subject,
+				}
 			)
 		except Exception as e:
 			frappe.log_error(message=str(e), title="Leave Application Email Error")
@@ -113,11 +104,6 @@ class LeaveApplication(Document, PWANotificationsMixin):
 		self.validate_applicable_after()
 
 	def on_update(self):
-		if self.status == "Open" and self.docstatus < 1:
-			# notify leave approver about creation
-			if frappe.db.get_single_value("HR Settings", "send_leave_notification"):
-				self.notify_leave_approver()
-
 		share_doc_with_approver(self, self.leave_approver)
 		self.publish_update()
 		self.notify_approval_status()
@@ -129,16 +115,23 @@ class LeaveApplication(Document, PWANotificationsMixin):
 		self.validate_back_dated_application()
 		# self.update_attendance()
 
-		# notify leave applier about approval
-		if frappe.db.get_single_value("HR Settings", "send_leave_notification"):
-			self.notify_employee()
-
 		# notify accounts if approved
 		if self.status =="Approved":
 			self.notify_accounts()
    
 		if self.status == "Rejected":
-			self.notify_employee()
+			try:
+				applicant_email = frappe.db.get_value("Employee", self.employee, "user_id", cache=True)
+				subject = f"Leave application for {self.employee_name} - Rejected"
+				self.notify(
+					{
+						"message_to": [applicant_email,self.leave_approver],
+						"subject": subject,
+					}
+				)
+			except Exception as e:
+				frappe.log_error(message=str(e), title="Leave Application Email Error")
+				frappe.msgprint(_("Email unable to be sent. Please notify leave applicant manually"))
 
 		self.create_leave_ledger_entry()
 		self.reload()
@@ -150,7 +143,7 @@ class LeaveApplication(Document, PWANotificationsMixin):
 		self.create_leave_ledger_entry(submit=False)
 		# notify leave applier about cancellation
 		if frappe.db.get_single_value("HR Settings", "send_leave_notification"):
-			self.notify_employee()
+			self.notify_leave_approver()
 		# self.cancel_attendance()
 
 		self.publish_update()
@@ -616,33 +609,6 @@ class LeaveApplication(Document, PWANotificationsMixin):
 		if self.half_day == 0:
 			self.half_day_date = None
 
-	def notify_employee(self):
-		employee_email = get_employee_email(self.employee)
-
-		if not employee_email:
-			return
-
-		parent_doc = frappe.get_doc("Leave Application", self.name)
-		args = parent_doc.as_dict()
-
-		template = frappe.db.get_single_value("HR Settings", "leave_status_notification_template")
-		if not template:
-			frappe.msgprint(_("Please set default template for Leave Status Notification in HR Settings."))
-			return
-		email_template = frappe.get_doc("Email Template", template)
-		subject = frappe.render_template(email_template.subject, args)
-		message = frappe.render_template(email_template.response_, args)
-		self.notify(
-			{
-				# for post in messages
-				"message": message,
-				"message_to": employee_email,
-				# for email
-				"subject": subject,
-				"notify": "employee",
-			}
-		)
-
 	def notify_leave_approver(self):
 		if self.leave_approver:
 			parent_doc = frappe.get_doc("Leave Application", self.name)
@@ -669,8 +635,6 @@ class LeaveApplication(Document, PWANotificationsMixin):
 			)
 	def notify_accounts(self):
 		try:
-			site = get_site_name()
-			url = "https://{0}/app/leave-application/{1}".format(site, self.name)
 			applicant_name = self.employee_name
 			approver_email = self.leave_approver
 			applicant_email = frappe.db.get_value("Employee", self.employee, "user_id", cache=True)
@@ -680,16 +644,10 @@ class LeaveApplication(Document, PWANotificationsMixin):
 				message_rec = ["jyotsana@fxmed.co.nz", "ricky@fxmed.co.nz", "nerisse@rnlabs.com.au", applicant_email, approver_email]
 			else:
 				message_rec = ["jyotsana@fxmed.co.nz", "ricky@fxmed.co.nz", applicant_email, approver_email]
-			message = _(
-				"{0} {1} has been approved."
-				"<br><br>"
-				"You can find the application here: <a href='{2}' target='_blank'>{2}</a>"
-			).format(applicant_name, self.leave_type, url)
 			self.notify(
 				{
 					"message_to": message_rec,
-					"subject":subject,
-					"message": message
+					"subject":subject
 				}
 			)
 		except Exception as e:
@@ -705,14 +663,29 @@ class LeaveApplication(Document, PWANotificationsMixin):
 			if not isinstance(contact, list):
 				if not args.notify == "employee":
 					contact = frappe.get_doc("User", contact).email or contact
-
+			site = get_site_name()
+			url = f"https://{site}/app/leave-application/{self.name}"
 			sender_email = get_email()
+			if self.status == "Approved" or self.status == "Rejected":
+				intro_line = f"{self.employee_name}'s {self.leave_type} has been {self.status.lower()}."
+			else:
+				intro_line = f"{self.employee_name} has applied for {self.leave_type}."
+			message = _(
+				"{0}"
+				"<br><br>"
+				"You can find the application here: <a href='{3}' target='_blank'>{3}</a>"
+				"<br><br>"
+				"<table border='1' cellpadding='5' cellspacing='0'>"
+				"<tr><th>Employee</th><th>Leave Type</th><th>From Date</th><th>To Date</th></tr>"
+				"<tr><td>{1}</td><td>{2}</td><td>{4}</td><td>{5}</td></tr>"
+				"</table>"
+			).format(intro_line, self.employee_name, self.leave_type, url, self.from_date, self.to_date)
 			try:
 				frappe.sendmail(
 					recipients=contact,
 					sender=sender_email,
 					subject=args.subject,
-					message=args.message,
+					message=message,
 				)
 				frappe.msgprint(_("Email sent to {0}").format(contact))
 			except frappe.OutgoingEmailError:

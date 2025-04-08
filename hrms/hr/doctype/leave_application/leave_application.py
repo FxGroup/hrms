@@ -675,6 +675,11 @@ class LeaveApplication(Document, PWANotificationsMixin):
 			approver_email = self.leave_approver
 			applicant_email = frappe.db.get_value("Employee", self.employee, "user_id", cache=True)
 			subject = _("Leave approval for {0}").format(applicant_name)
+			company = get_default_company()
+			if (company == "RN Labs" or company == "Therahealth") and approver_email != "nerisse@rnlabs.com.au":
+				message_rec = ["jyotsana@fxmed.co.nz", "ricky@fxmed.co.nz", "nerisse@rnlabs.com.au", applicant_email, approver_email]
+			else:
+				message_rec = ["jyotsana@fxmed.co.nz", "ricky@fxmed.co.nz", applicant_email, approver_email]
 			message = _(
 				"{0} {1} has been approved."
 				"<br><br>"
@@ -682,7 +687,7 @@ class LeaveApplication(Document, PWANotificationsMixin):
 			).format(applicant_name, self.leave_type, url)
 			self.notify(
 				{
-					"message_to": ["jyotsana@fxmed.co.nz", "ricky@fxmed.co.nz", applicant_email, approver_email],
+					"message_to": message_rec,
 					"subject":subject,
 					"message": message
 				}

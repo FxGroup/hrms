@@ -675,9 +675,10 @@ class LeaveApplication(Document, PWANotificationsMixin):
 				"<br><br>"
 				"You can find the application here: <a href='{3}' target='_blank'>{3}</a>"
 				"<br><br>"
+				"Details:"
 				"<table border='1' cellpadding='5' cellspacing='0'>"
 				"<tr><th>Employee</th><th>Leave Type</th><th>From Date</th><th>To Date</th></tr>"
-				"<tr><td>{1}</td><td>{2}</td><td>{4}</td><td>{5}</td></tr>"
+				"<tr><td> {1} </td><td> {2} </td><td> {4} </td><td> {5} </td></tr>"
 				"</table>"
 			).format(intro_line, self.employee_name, self.leave_type, url, self.from_date, self.to_date)
 			try:

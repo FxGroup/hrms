@@ -113,6 +113,9 @@ frappe.ui.form.on("Leave Application", {
 		}
 
 		frm.trigger("set_employee");
+
+		frm.toggle_display('partial_hours_leave', frm.doc.half_day_date);
+		frm.toggle_display('partial_minutes_leave', frm.doc.half_day);
 		// if (frm.doc.docstatus === 0) {
 		// 	frm.trigger("make_dashboard");
 		// }

@@ -37,6 +37,7 @@ from hrms.mixins.pwa_notifications import PWANotificationsMixin
 from hrms.utils import get_employee_email
 from fxnmrnth import get_site_name
 
+# TODO: Fix the on submission logic for updating the partial day
 
 class LeaveDayBlockedError(frappe.ValidationError):
 	pass
@@ -377,13 +378,22 @@ class LeaveApplication(Document, PWANotificationsMixin):
 
 	def validate_balance_leaves(self):
 		if self.from_date and self.to_date:
+			partial_hours = 0
+			partial_mins = 0
+			if self.partial_hours_leave:
+				partial_hours = flt(self.partial_hours_leave)
+			if self.partial_minutes_leave:
+				partial_mins = flt(self.partial_minutes_leave)
+
 			self.total_leave_days = get_number_of_leave_days(
-				self.employee,
-				self.leave_type,
-				self.from_date,
-				self.to_date,
-				self.half_day,
-				self.half_day_date,
+				employee=self.employee,
+				leave_type=self.leave_type,
+				from_date=self.from_date,
+				to_date=self.to_date,
+				half_day=self.half_day,
+				half_day_date=self.half_day_date,
+				partial_hours_leave=partial_hours,
+				partial_minutes_leave=partial_mins
 			)
 
 			if self.total_leave_days <= 0:
@@ -676,10 +686,11 @@ class LeaveApplication(Document, PWANotificationsMixin):
 				"You can find the application here: <a href='{3}' target='_blank'>{3}</a>"
 				"<br><br>"
 				"Details:"
-				"<table border='1' cellpadding='5' cellspacing='0'>"
-				"<tr><th>Employee</th><th>Leave Type</th><th>From Date</th><th>To Date</th></tr>"
-				"<tr><td> {1} </td><td> {2} </td><td> {4} </td><td> {5} </td></tr>"
-				"</table>"
+				"<br><br>"
+				"- Employee - {1}"
+				"- Leave Type - {2}"
+				"- From Date - {4}"
+				"- To Date - {5}"
 			).format(intro_line, self.employee_name, self.leave_type, url, self.from_date, self.to_date)
 			try:
 				frappe.sendmail(
@@ -849,53 +860,53 @@ def get_allocation_expiry_for_cf_leaves(
 
 @frappe.whitelist()
 def get_number_of_leave_days(
-    employee: str,
-    leave_type: str,
-    from_date: datetime.date,
-    to_date: datetime.date,
-    half_day: int | str | None = None,
-    half_day_date: datetime.date | str | None = None,
-    holiday_list: str | None = None,
-    partial_hours_leave: str | int | None = None,
-    partial_minutes_leave: str | int | None = None
+	employee: str,
+	leave_type: str,
+	from_date: datetime.date,
+	to_date: datetime.date,
+	half_day: int | str | None = None,
+	half_day_date: datetime.date | str | None = None,
+	holiday_list: str | None = None,
+	partial_hours_leave: str | int | None = None,
+	partial_minutes_leave: str | int | None = None
 ) -> float:
-    """Returns number of leave days between 2 dates after considering half day, holidays, and partial hours/minutes.
-    partial_minutes_leave can be 0, 15, 30, 45.
-    """
-    from_date = getdate(from_date)
-    to_date = getdate(to_date)
-    half_day = cint(half_day)
-    partial_hours = 0.0
+	"""Returns number of leave days between 2 dates after considering half day, holidays, and partial hours/minutes.
+	partial_minutes_leave can be 0, 15, 30, 45.
+	"""
+	from_date = getdate(from_date)
+	to_date = getdate(to_date)
+	half_day = cint(half_day)
+	partial_hours = 0.0
 
-    if half_day == 1:
-        if partial_hours_leave is not None or partial_minutes_leave is not None:
-            try:
-                partial_hours = flt(partial_hours_leave) if partial_hours_leave else 0.0
-                partial_minutes = flt(partial_minutes_leave) if partial_minutes_leave else 0.0
-                partial_hours += partial_minutes / 60.0
-                partial_hours = partial_hours / 8.0
-            except (ValueError, TypeError):
-                partial_hours = 0.0
+	if half_day == 1:
+		if partial_hours_leave is not None or partial_minutes_leave is not None:
+			try:
+				partial_hours = flt(partial_hours_leave) if partial_hours_leave else 0.0
+				partial_minutes = flt(partial_minutes_leave) if partial_minutes_leave else 0.0
+				partial_hours += partial_minutes / 60.0
+				partial_hours = partial_hours / 8.0
+			except (ValueError, TypeError):
+				partial_hours = 0.0
 
-            partial_hours = max(0.0, min(partial_hours, 1.0))
-        else:
-            partial_hours = 0.5
+			partial_hours = max(0.0, min(partial_hours, 1.0))
+		else:
+			partial_hours = 0.5
 
-        if from_date == to_date:
-            number_of_days = partial_hours
-        elif half_day_date and from_date <= getdate(half_day_date) <= to_date:
-            number_of_days = date_diff(to_date, from_date) + partial_hours
-        else:
-            number_of_days = date_diff(to_date, from_date) + 1.0
-    else:
-        number_of_days = date_diff(to_date, from_date) + 1.0
+		if from_date == to_date:
+			number_of_days = partial_hours
+		elif half_day_date and from_date <= getdate(half_day_date) <= to_date:
+			number_of_days = date_diff(to_date, from_date) + partial_hours
+		else:
+			number_of_days = date_diff(to_date, from_date) + 1.0
+	else:
+		number_of_days = date_diff(to_date, from_date) + 1.0
 
-    if not frappe.db.get_value("Leave Type", leave_type, "include_holiday"):
-        holidays = flt(get_holidays(employee, from_date, to_date, holiday_list=holiday_list))
-        number_of_days = flt(number_of_days) - holidays
-        number_of_days = max(0.0, number_of_days)
+	if not frappe.db.get_value("Leave Type", leave_type, "include_holiday"):
+		holidays = flt(get_holidays(employee, from_date, to_date, holiday_list=holiday_list))
+		number_of_days = flt(number_of_days) - holidays
+		number_of_days = max(0.0, number_of_days)
 
-    return number_of_days
+	return number_of_days
 
 
 @frappe.whitelist()
@@ -954,10 +965,10 @@ def get_leave_balance_on(
 	:param to_date: future date to check for allocation expiry
 	:param consider_all_leaves_in_the_allocation_period: consider all leaves taken till the allocation end date
 	:param for_consumption: flag to check if leave balance is required for consumption or display
-	        eg: employee has leave balance = 10 but allocation is expiring in 1 day so employee can only consume 1 leave
-	        in this case leave_balance = 10 but leave_balance_for_consumption = 1
-	        if True, returns a dict eg: {'leave_balance': 10, 'leave_balance_for_consumption': 1}
-	        else, returns leave_balance (in this case 10)
+			eg: employee has leave balance = 10 but allocation is expiring in 1 day so employee can only consume 1 leave
+			in this case leave_balance = 10 but leave_balance_for_consumption = 1
+			if True, returns a dict eg: {'leave_balance': 10, 'leave_balance_for_consumption': 1}
+			else, returns leave_balance (in this case 10)
 	"""
 
 	if not to_date:

@@ -687,10 +687,13 @@ class LeaveApplication(Document, PWANotificationsMixin):
 				"<br><br>"
 				"Details:"
 				"<br><br>"
-				"- Employee - {1}\n"
-				"- Leave Type - {2}\n"
-				"- From Date - {4}\n"
-    			"- To Date - {5}\n"
+				"- Employee - {1}"
+				"<br><br>"
+				"- Leave Type - {2}"
+    			"<br><br>"
+				"- From Date - {4}"
+				"<br><br>"
+    			"- To Date - {5}"
 			).format(intro_line, self.employee_name, self.leave_type, url, self.from_date, self.to_date)
 			try:
 				frappe.sendmail(

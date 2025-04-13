@@ -676,7 +676,7 @@ class LeaveApplication(Document, PWANotificationsMixin):
 			site = get_site_name()
 			url = f"https://{site}/app/leave-application/{self.name}"
 			sender_email = get_email()
-			if self.status == "Approved" or self.status == "Rejected":
+			if self.status in ["Approved", "Rejected", "Cancelled"]:
 				intro_line = f"{self.employee_name}'s {self.leave_type} has been {self.status.lower()}."
 			else:
 				intro_line = f"{self.employee_name} has applied for {self.leave_type}."
@@ -694,7 +694,9 @@ class LeaveApplication(Document, PWANotificationsMixin):
 				"- From Date - {4}"
 				"<br><br>"
     			"- To Date - {5}"
-			).format(intro_line, self.employee_name, self.leave_type, url, self.from_date, self.to_date)
+				"<br><br>"
+				"- Status - {6}"
+			).format(intro_line, self.employee_name, self.leave_type, url, self.from_date, self.to_date, self.status)
 			try:
 				frappe.sendmail(
 					recipients=contact,

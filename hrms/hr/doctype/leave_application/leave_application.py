@@ -650,10 +650,13 @@ class LeaveApplication(Document, PWANotificationsMixin):
 			applicant_email = frappe.db.get_value("Employee", self.employee, "user_id", cache=True)
 			subject = _("Leave approval for {0}").format(applicant_name)
 			company = get_default_company()
-			if (company == "RN Labs" or company == "Therahealth") and approver_email != "nerisse@rnlabs.com.au":
-				message_rec = ["jyotsana@fxmed.co.nz", "ricky@fxmed.co.nz", "nerisse@rnlabs.com.au", applicant_email, approver_email]
-			else:
-				message_rec = ["jyotsana@fxmed.co.nz", "ricky@fxmed.co.nz", applicant_email, approver_email]
+			reports_to_user = frappe.db.get_value("Employee", self.employee, "reports_to", cache=True)
+			reports_to_email = frappe.db.get_value("Employee", reports_to_user, "user_id", cache=True)
+			message_rec = ["jyotsana@fxmed.co.nz", "ricky@fxmed.co.nz", applicant_email, approver_email]
+			if (company == "RN Labs" or company == "Therahealth") and "nerisse@rnlabs.com.au" not in message_rec:
+				message_rec.append("nerisse@rnlabs.com.au")
+			if reports_to_email not in message_rec:
+				message_rec.append(reports_to_email)
 			self.notify(
 				{
 					"message_to": message_rec,

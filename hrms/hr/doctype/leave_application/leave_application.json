@@ -28,6 +28,7 @@
   "leave_approver",
   "leave_approver_name",
   "follow_via_email",
+  "additional_leave_approvers",
   "column_break_18",
   "posting_date",
   "status",
@@ -248,6 +249,14 @@
    "fieldname": "sb_other_details",
    "fieldtype": "Section Break",
    "label": "Other Details"
+  },
+  {
+   "fieldname": "additional_leave_approvers",
+   "fieldtype": "Table",
+   "label": "Additional Leave Approvers",
+   "no_copy": 1,
+   "options": "Additional Leave Approvers",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
@@ -256,7 +265,7 @@
  "is_submittable": 1,
  "links": [],
  "max_attachments": 3,
- "modified": "2025-04-01 13:09:30.367124",
+ "modified": "2025-04-24 10:08:01.997860",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Leave Application",

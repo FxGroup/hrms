@@ -286,7 +286,20 @@ frappe.ui.form.on("Leave Application", {
 				},
 				callback: function (r) {
 					if (r && r.message) {
-						frm.set_value("leave_approver", r.message);
+						frm.set_value("leave_approver", r.message.leave_approver);
+
+						if (r.message.additional_approvers && r.message.additional_approvers.length > 1) {
+							r.message.additional_approvers.forEach((approver) => {
+								frm.add_child("additional_leave_approvers", {
+									leave_approver: approver.leave_approver,
+									notification_level: approver.notification_level,
+								});
+							})
+						} else {
+							frm.clear_table("additional_leave_approvers");
+						}
+
+						frm.refresh_field("additional_leave_approvers");
 					}
 				},
 			});

@@ -1431,6 +1431,7 @@ def get_approved_leaves_for_period(employee, leave_type, from_date, to_date):
 
 @frappe.whitelist()
 def get_leave_approver(employee):
+	
 	leave_approver, department = frappe.db.get_value("Employee", employee, ["leave_approver", "department"])
 
 	if not leave_approver and department:
@@ -1440,7 +1441,16 @@ def get_leave_approver(employee):
 			"approver",
 		)
 
-	return leave_approver
+	additional_approvers = []
+	
+	if frappe.db.exists("Additional Leave Approvers", {"parent": employee}):
+		additional_approvers = frappe.get_all(
+			"Additional Leave Approvers",
+			filters={"parent": employee},
+			fields=["leave_approver", "notification_level"]
+		)
+
+	return {'leave_approver': leave_approver, 'additional_approvers': additional_approvers}
 
 
 def on_doctype_update():

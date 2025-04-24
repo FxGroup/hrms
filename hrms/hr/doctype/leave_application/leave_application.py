@@ -74,12 +74,13 @@ class LeaveApplication(Document, PWANotificationsMixin):
 		user = frappe.session.user
 		if user == "Administrator":
 			user = "it@rnlabs.com.au"
+		
+		message_to = get_message_to(self.employee, 0)
 		try:
-			applicant_email = frappe.db.get_value("Employee", self.employee, "user_id", cache=True)
 			subject = f"Leave application for {self.employee_name}"
 			self.notify(
 				{
-					"message_to": [applicant_email,self.leave_approver],
+					"message_to": message_to,
 					"subject": subject,
 				}
 			)
@@ -122,11 +123,11 @@ class LeaveApplication(Document, PWANotificationsMixin):
    
 		if self.status == "Rejected":
 			try:
-				applicant_email = frappe.db.get_value("Employee", self.employee, "user_id", cache=True)
+				message_to = get_message_to(self.employee, 2)
 				subject = f"Leave application for {self.employee_name} - Rejected"
 				self.notify(
 					{
-						"message_to": [applicant_email,self.leave_approver],
+						"message_to": message_to,
 						"subject": subject,
 					}
 				)
@@ -633,12 +634,13 @@ class LeaveApplication(Document, PWANotificationsMixin):
 			email_template = frappe.get_doc("Email Template", template)
 			subject = frappe.render_template(email_template.subject, args)
 			message = frappe.render_template(email_template.response_, args)
+			message_to = get_message_to(self.employee, 1)
 
 			self.notify(
 				{
 					# for post in messages
 					"message": message,
-					"message_to": self.leave_approver,
+					"message_to": message_to,
 					# for email
 					"subject": subject,
 				}
@@ -646,20 +648,21 @@ class LeaveApplication(Document, PWANotificationsMixin):
 	def notify_accounts(self):
 		try:
 			applicant_name = self.employee_name
-			approver_email = self.leave_approver
-			applicant_email = frappe.db.get_value("Employee", self.employee, "user_id", cache=True)
 			subject = _("Leave approval for {0}").format(applicant_name)
 			company = get_default_company()
 			reports_to_user = frappe.db.get_value("Employee", self.employee, "reports_to", cache=True)
 			reports_to_email = frappe.db.get_value("Employee", reports_to_user, "user_id", cache=True)
-			message_rec = ["jyotsana@fxmed.co.nz", "ricky@fxmed.co.nz", applicant_email, approver_email]
-			if (company == "RN Labs" or company == "Therahealth") and "nerisse@rnlabs.com.au" not in message_rec:
-				message_rec.append("nerisse@rnlabs.com.au")
-			if reports_to_email not in message_rec:
-				message_rec.append(reports_to_email)
+			if reports_to_email == "Administrator":
+				reports_to_email = "mitch@fxmed.co.nz"
+			message_to = get_message_to(self.employee, 3)
+			if (company == "RN Labs" or company == "Therahealth") and "nerisse@rnlabs.com.au" not in message_to:
+				message_to.append("nerisse@rnlabs.com.au")
+			for email in ["jyotsana@fxmed.co.nz", "ricky@fxmed.co.nz", reports_to_email]:
+				if email not in message_to and email != "amal@fxmed.co.nz":
+					message_to.append(email)
 			self.notify(
 				{
-					"message_to": message_rec,
+					"message_to": message_to,
 					"subject":subject
 				}
 			)
@@ -1452,6 +1455,15 @@ def get_leave_approver(employee):
 
 	return {'leave_approver': leave_approver, 'additional_approvers': additional_approvers}
 
+@frappe.whitelist()
+def get_message_to(employee, notification_level):
+	applicant_email = frappe.db.get_value("Employee", employee, "user_id", cache=True)
+	leave_approvers = get_leave_approver(employee)
+	message_to = [applicant_email, leave_approvers['leave_approver']]
+	for approver in leave_approvers['additional_approvers']:
+		if approver not in message_to and int(approver['notification_level']) >= notification_level:
+			message_to.append(approver['leave_approver'])
+	return message_to
 
 def on_doctype_update():
 	frappe.db.add_index("Leave Application", ["employee", "from_date", "to_date"])

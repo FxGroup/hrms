@@ -288,7 +288,7 @@ frappe.ui.form.on("Leave Application", {
 					if (r && r.message) {
 						frm.set_value("leave_approver", r.message.leave_approver);
 
-						if (r.message.additional_approvers && r.message.additional_approvers.length > 1) {
+						if (r.message.additional_approvers && r.message.additional_approvers.length >= 1) {
 							r.message.additional_approvers.forEach((approver) => {
 								frm.add_child("additional_leave_approvers", {
 									leave_approver: approver.leave_approver,

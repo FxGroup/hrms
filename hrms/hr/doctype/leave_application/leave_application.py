@@ -696,10 +696,10 @@ class LeaveApplication(Document, PWANotificationsMixin):
 				"- Employee - {1}"
 				"<br><br>"
 				"- Leave Type - {2}"
-    			"<br><br>"
+				"<br><br>"
 				"- From Date - {4}"
 				"<br><br>"
-    			"- To Date - {5}"
+				"- To Date - {5}"
 				"<br><br>"
 				"- Status - {6}"
 			).format(intro_line, self.employee_name, self.leave_type, url, self.from_date, self.to_date, self.status)

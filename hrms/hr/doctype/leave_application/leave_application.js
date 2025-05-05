@@ -114,8 +114,8 @@ frappe.ui.form.on("Leave Application", {
 
 		frm.trigger("set_employee");
 
-		// frm.toggle_display('partial_hours_leave', frm.doc.half_day_date);
-		// frm.toggle_display('partial_minutes_leave', frm.doc.half_day);
+		frm.toggle_display('partial_hours_leave', frm.doc.half_day_date);
+		frm.toggle_display('partial_minutes_leave', frm.doc.half_day);
 		// if (frm.doc.docstatus === 0) {
 		// 	frm.trigger("make_dashboard");
 		// }
@@ -175,37 +175,37 @@ frappe.ui.form.on("Leave Application", {
 	},
 
 	half_day_date(frm) {
-		// frm.toggle_display('partial_hours_leave', frm.doc.half_day);
-		// frm.toggle_reqd('partial_hours_leave', frm.doc.half_day);
-		// frm.toggle_display('partial_minutes_leave', frm.doc.half_day);
-		// frm.toggle_reqd('partial_minutes_leave', frm.doc.half_day);
+		frm.toggle_display('partial_hours_leave', frm.doc.half_day);
+		frm.toggle_reqd('partial_hours_leave', frm.doc.half_day);
+		frm.toggle_display('partial_minutes_leave', frm.doc.half_day);
+		frm.toggle_reqd('partial_minutes_leave', frm.doc.half_day);
 
 		frm.trigger("calculate_total_days");
 	},
 
-	// partial_hours_leave(frm) {
-	// 	let val = frm.doc.partial_hours_leave;
+	partial_hours_leave(frm) {
+		let val = frm.doc.partial_hours_leave;
 	
-	// 	if (val !== undefined && val !== null) {
-	// 		val = Math.floor(Number(val));
-	// 		if (isNaN(val) || val < 0) {
-	// 			frappe.msgprint(__('Please enter a positive whole number for Partial Hours Leave.'));
-	// 			frm.set_value('partial_hours_leave', 0);
-	// 		} else {
-	// 			frm.set_value('partial_hours_leave', val);
-	// 		}
-	// 	} else {
-	// 		frm.set_value('partial_hours_leave', 0);
-	// 	}
+		if (val !== undefined && val !== null) {
+			val = Math.floor(Number(val));
+			if (isNaN(val) || val < 0) {
+				frappe.msgprint(__('Please enter a positive whole number for Partial Hours Leave.'));
+				frm.set_value('partial_hours_leave', 0);
+			} else {
+				frm.set_value('partial_hours_leave', val);
+			}
+		} else {
+			frm.set_value('partial_hours_leave', 0);
+		}
 	
-	// 	frm.trigger("calculate_total_days");
-	// },
+		frm.trigger("calculate_total_days");
+	},
 
-	// partial_minutes_leave(frm) {
-	// 	if (frm.doc.partial_minutes_leave != 0) {
-	// 		frm.trigger("calculate_total_days");
-	// 	}
-	// },
+	partial_minutes_leave(frm) {
+		if (frm.doc.partial_minutes_leave != 0) {
+			frm.trigger("calculate_total_days");
+		}
+	},
 
 	validate_from_to_date: function (frm, null_date) {
 		const from_date = Date.parse(frm.doc.from_date);
@@ -264,8 +264,8 @@ frappe.ui.form.on("Leave Application", {
 					to_date: frm.doc.to_date,
 					half_day: frm.doc.half_day,
 					half_day_date: frm.doc.half_day_date,
-					partial_hours_leave: 0,
-					partial_minutes_leave: 0
+					partial_hours_leave: frm.doc.partial_hours_leave || 0,
+					partial_minutes_leave: frm.doc.partial_minutes_leave || 0
 				},
 				callback: function (r) {
 					if (r && r.message) {

@@ -18,6 +18,11 @@
   "disable_rounded_total",
   "column_break_gzpl",
   "show_leave_balances_in_salary_slip",
+  "payroll_period_section",
+  "payroll_frequency",
+  "column_break_bvne",
+  "payroll_start",
+  "payroll_end",
   "email_section",
   "email_salary_slip_to_employee",
   "sender",
@@ -172,13 +177,40 @@
    "fieldtype": "Link",
    "label": "Email Template",
    "options": "Email Template"
+  },
+  {
+   "fieldname": "payroll_period_section",
+   "fieldtype": "Section Break",
+   "label": "Payroll Period"
+  },
+  {
+   "default": "Fortnightly",
+   "fieldname": "payroll_frequency",
+   "fieldtype": "Select",
+   "label": "Payroll Frequency",
+   "options": "\nWeekly\nFortnightly\nMonthly"
+  },
+  {
+   "fieldname": "payroll_start",
+   "fieldtype": "Date",
+   "label": "Payroll Start"
+  },
+  {
+   "fieldname": "payroll_end",
+   "fieldtype": "Date",
+   "label": "Payroll End"
+  },
+  {
+   "fieldname": "column_break_bvne",
+   "fieldtype": "Column Break"
   }
  ],
+ "grid_page_length": 50,
  "icon": "fa fa-cog",
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2024-10-18 17:12:02.044020",
+ "modified": "2025-05-19 11:23:35.104542",
  "modified_by": "Administrator",
  "module": "Payroll",
  "name": "Payroll Settings",

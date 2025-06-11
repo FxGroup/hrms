@@ -7,6 +7,7 @@ from frappe import _
 from frappe.custom.doctype.property_setter.property_setter import make_property_setter
 from frappe.model.document import Document
 from frappe.utils import cint
+from datetime import datetime, timedelta, date
 
 
 class PayrollSettings(Document):
@@ -43,3 +44,18 @@ class PayrollSettings(Document):
 			"Check",
 			validate_fields_for_doctype=False,
 		)
+
+
+def update_payroll_period():
+	today = datetime.now().date()
+	today = date(2025, 6, 30)
+	settings = frappe.get_doc('Payroll Settings')
+
+	start_date = datetime.strptime(settings.payroll_start, '%Y-%m-%d').date()
+	days_since_start = (today - start_date).days
+
+	if days_since_start >= 14:
+		settings.payroll_start = today.strftime('%Y-%m-%d')
+		settings.payroll_end = (today + timedelta(days=13)).strftime('%Y-%m-%d')
+		settings.save()
+		frappe.db.commit()

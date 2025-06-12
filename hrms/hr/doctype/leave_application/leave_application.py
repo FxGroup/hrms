@@ -696,10 +696,10 @@ class LeaveApplication(Document, PWANotificationsMixin):
 				"- Employee - {1}"
 				"<br><br>"
 				"- Leave Type - {2}"
-    			"<br><br>"
+				"<br><br>"
 				"- From Date - {4}"
 				"<br><br>"
-    			"- To Date - {5}"
+				"- To Date - {5}"
 				"<br><br>"
 				"- Status - {6}"
 			).format(intro_line, self.employee_name, self.leave_type, url, self.from_date, self.to_date, self.status)
@@ -1466,3 +1466,63 @@ def get_message_to(employee, notification_level):
 
 def on_doctype_update():
 	frappe.db.add_index("Leave Application", ["employee", "from_date", "to_date"])
+
+
+import frappe
+from datetime import datetime, timedelta
+
+@frappe.whitelist()
+def get_leave_schedule(employee, from_date, to_date, half_day, half_day_date, partial_hours_leave=0, partial_minutes_leave=0):
+	emp_doc = frappe.get_doc("Employee", employee)
+	default_schedule = []
+
+	for item in emp_doc.work_hours:
+		default_schedule.append({
+			"day": item.day,
+			"hours": int(item.hours),
+			"minutes": int(item.minutes),
+		})
+
+	if not default_schedule:
+		return
+
+	from_dt = datetime.strptime(from_date, "%Y-%m-%d")
+	to_dt = datetime.strptime(to_date, "%Y-%m-%d")
+	half_day_dt = datetime.strptime(half_day_date, "%Y-%m-%d") if half_day and half_day_date else None
+
+	leave_table = []
+	total_hours = 0
+	total_minutes = 0
+
+	current_day = from_dt
+	while current_day <= to_dt:
+		weekday_index = current_day.weekday()  # 0 = Monday, 6 = Sunday
+
+		schedule_index = weekday_index if current_day < from_dt + timedelta(days=7) else weekday_index + 7
+		schedule_entry = default_schedule[schedule_index]
+
+		leave_hours = schedule_entry["hours"]
+		leave_minutes = schedule_entry["minutes"]
+
+		if half_day and current_day == half_day_dt:
+			leave_hours = partial_hours_leave
+			leave_minutes = partial_minutes_leave
+
+		leave_table.append({
+			"day": schedule_entry["day"],
+			"hours": leave_hours,
+			"minutes": str(leave_minutes)
+		})
+
+		total_hours += float(leave_hours)
+		total_minutes += float(leave_minutes)
+		current_day += timedelta(days=1)
+
+	total_hours += total_minutes // 60
+	total_minutes = total_minutes % 60
+
+	return {
+		"leave_table": leave_table,
+		"total_leave_hours": total_hours,
+		"total_leave_minutes": total_minutes
+	}

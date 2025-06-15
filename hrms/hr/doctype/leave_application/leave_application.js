@@ -116,6 +116,12 @@ frappe.ui.form.on("Leave Application", {
 
 		frm.toggle_display('partial_hours_leave', frm.doc.half_day_date);
 		frm.toggle_display('partial_minutes_leave', frm.doc.half_day);
+
+		if (frm.doc.leave_days && frm.doc.leave_days.length === 0) {
+			frm.toggle_display('leave_days', false);
+			frm.toggle_display('total_leave_hours', false);
+			frm.toggle_display('total_leave_minutes', false);
+		}
 		// if (frm.doc.docstatus === 0) {
 		// 	frm.trigger("make_dashboard");
 		// }
@@ -202,9 +208,7 @@ frappe.ui.form.on("Leave Application", {
 	},
 
 	partial_minutes_leave(frm) {
-		if (frm.doc.partial_minutes_leave != 0) {
-			frm.trigger("calculate_total_days");
-		}
+		frm.trigger("calculate_total_days");
 	},
 
 	validate_from_to_date: function (frm, null_date) {
@@ -270,10 +274,41 @@ frappe.ui.form.on("Leave Application", {
 				callback: function (r) {
 					if (r && r.message) {
 						frm.set_value("total_leave_days", r.message);
+						frm.trigger('set_work_days');
 						frm.trigger("get_leave_balance");
 					}
 				},
 			});
+		}
+	},
+
+	set_work_days: function(frm) {
+		if (frm.doc.total_leave_days) {
+			frm.clear_table('leave_days');
+
+			frappe.call({
+				method: "hrms.hr.doctype.leave_application.leave_application.get_leave_schedule",
+				args: {
+					employee: frm.doc.employee,
+					from_date: frm.doc.from_date,
+					to_date: frm.doc.to_date,
+					half_day: frm.doc.half_day,
+					half_day_date: frm.doc.half_day_date,
+					partial_hours_leave: frm.doc.partial_hours_leave || 0,
+					partial_minutes_leave: frm.doc.partial_minutes_leave || 0
+				},
+				callback: function(r) {
+					if (r && r.message) {
+						frm.set_value('leave_days', r.message.leave_table);
+						frm.set_value('total_leave_hours', r.message.total_leave_hours);
+						frm.set_value('total_leave_minutes', r.message.total_leave_minutes);
+
+						frm.toggle_display('leave_days', true);
+						frm.toggle_display('total_leave_hours', true);
+						frm.toggle_display('total_leave_minutes', true);
+					}
+				}
+			})
 		}
 	},
 
@@ -305,6 +340,39 @@ frappe.ui.form.on("Leave Application", {
 			});
 		}
 	},
+	before_save: function (frm) {
+		if (frm.doc.from_date && frm.doc.to_date) {
+			return new Promise((resolve, reject) => {
+				frappe.db.get_value("Payroll Settings", { 'name': 'Payroll Settings' }, "payroll_start", (r) => {
+					if (r && r.payroll_start &&
+						(frm.doc.to_date < r.payroll_start || frm.doc.from_date < r.payroll_start)) {
+						frappe.confirm(
+							'You are submitting this application before the current payroll period. Do you want to continue?',
+							function () {
+								let note = 'User confirmed early submission before payroll period.';
+								frm.doc.description = (frm.doc.description || '') + `\n${note}`;
+								frm.set_value('prev_period_application', 1);
+								resolve();
+							},
+							function () {
+								['from_date', 'to_date', 'leave_days', 'total_leave_hours', 'total_leave_minutes', 'total_leave_days'].forEach((field) => {
+									frm.set_value(field, null);
+								});
+
+								['leave_days', 'total_leave_hours', 'total_leave_minutes', 'total_leave_days'].forEach((field) => {
+									frm.toggle_display(field, false);
+								});
+
+								reject();
+							}
+						);
+					} else {
+						resolve();
+					}
+				});
+			});
+		}
+	}
 });
 
 frappe.tour["Leave Application"] = [

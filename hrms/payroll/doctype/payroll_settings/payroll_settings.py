@@ -48,7 +48,6 @@ class PayrollSettings(Document):
 
 def update_payroll_period():
 	today = datetime.now().date()
-	today = date(2025, 6, 30)
 	settings = frappe.get_doc('Payroll Settings')
 
 	start_date = datetime.strptime(settings.payroll_start, '%Y-%m-%d').date()

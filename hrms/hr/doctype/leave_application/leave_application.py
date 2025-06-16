@@ -147,7 +147,7 @@ class LeaveApplication(Document, PWANotificationsMixin):
 		if frappe.db.get_single_value("HR Settings", "send_leave_notification"):
 			self.notify_leave_approver()
 		# self.cancel_attendance()
-
+		self.workflow_state = "Cancelled"
 		self.publish_update()
 
 	def after_delete(self):

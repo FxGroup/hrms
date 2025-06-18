@@ -12,7 +12,6 @@ frappe.ui.form.on("Leave Application", {
 				},
 			};
 		});
-
 		frm.set_query("employee", erpnext.queries.employee);
 	},
 
@@ -93,7 +92,6 @@ frappe.ui.form.on("Leave Application", {
 
 	refresh: function (frm) {
 		hrms.leave_utils.add_view_ledger_button(frm);
-
 		if (frm.is_new()) {
 			frm.trigger("calculate_total_days");
 		}
@@ -122,9 +120,7 @@ frappe.ui.form.on("Leave Application", {
 			frm.toggle_display('total_leave_hours', false);
 			frm.toggle_display('total_leave_minutes', false);
 		}
-		// if (frm.doc.docstatus === 0) {
-		// 	frm.trigger("make_dashboard");
-		// }
+		frm.trigger("set_form_buttons");
 	},
 
 	async set_employee(frm) {
@@ -167,6 +163,7 @@ frappe.ui.form.on("Leave Application", {
 	},
 
 	from_date: function (frm) {
+		// frm.events.validate_from_to_date(frm, "from_date");		
 		frm.events.validate_from_to_date(frm, "to_date");
 		//frm.trigger("make_dashboard");
 		frm.trigger("half_day_datepicker");
@@ -174,6 +171,7 @@ frappe.ui.form.on("Leave Application", {
 	},
 
 	to_date: function (frm) {
+		// frm.events.validate_from_to_date(frm, "to_date");
 		frm.events.validate_from_to_date(frm, "from_date");
 		//frm.trigger("make_dashboard");
 		frm.trigger("half_day_datepicker");
@@ -211,10 +209,24 @@ frappe.ui.form.on("Leave Application", {
 		frm.trigger("calculate_total_days");
 	},
 
-	validate_from_to_date: function (frm, null_date) {
+	validate_from_to_date: function (frm, updated_field) {
+		if (!frm.doc.from_date || !frm.doc.to_date) return;
+
 		const from_date = Date.parse(frm.doc.from_date);
 		const to_date = Date.parse(frm.doc.to_date);
-		if (to_date < from_date) frm.set_value(null_date, "");
+
+		if (to_date < from_date) {
+			const other_field = updated_field === "from_date" ? "to_date" : "from_date";
+
+			frm.set_value(other_field, frm.doc[updated_field]);
+			frappe.show_alert({
+				message: __("Changing '{0}' to {1}.", [
+					__(frm.fields_dict[other_field].df.label),
+					frappe.datetime.str_to_user(frm.doc[updated_field]),
+				]),
+				indicator: "blue",
+			});
+		}
 	},
 
 	half_day_datepicker: function (frm) {
@@ -372,7 +384,29 @@ frappe.ui.form.on("Leave Application", {
 				});
 			});
 		}
-	}
+	},
+	set_form_buttons: async function (frm) {
+		let self_approval_not_allowed = frm.doc.__onload
+			? frm.doc.__onload.self_leave_approval_not_allowed
+			: 0;
+		let current_employee = await hrms.get_current_employee();
+		if (
+			frm.doc.docstatus === 0 &&
+			!frm.is_dirty() &&
+			!frappe.model.has_workflow(frm.doctype)
+		) {
+			if (self_approval_not_allowed && current_employee == frm.doc.employee) {
+				frm.set_df_property("status", "read_only", 1);
+				frm.trigger("show_save_button");
+			}
+		}
+	},
+	show_save_button: function (frm) {
+		frm.page.set_primary_action("Save", () => {
+			frm.save();
+		});
+		$(".form-message").prop("hidden", true);
+	},
 });
 
 frappe.tour["Leave Application"] = [

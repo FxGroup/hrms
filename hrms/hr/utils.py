@@ -542,16 +542,20 @@ def get_salary_assignments(employee, payroll_period):
 		order_by="from_date",
 	)
 
-	if not assignments:
+	if not assignments or getdate(assignments[0].from_date) > getdate(start_date):
 		# if no assignments found for the given period
-		# get the last one assigned before the period that is still active
-		assignments = frappe.get_all(
+		# or the latest assignment hast started in the middle of the period
+		# get the last one assigned before the period start date
+		past_assignment = frappe.get_all(
 			"Salary Structure Assignment",
-			filters={"employee": employee, "docstatus": 1, "from_date": ["<=", start_date]},
+			filters={"employee": employee, "docstatus": 1, "from_date": ["<", start_date]},
 			fields=["*"],
 			order_by="from_date desc",
 			limit=1,
 		)
+
+		if past_assignment:
+			assignments = past_assignment + assignments
 
 	return assignments
 
@@ -639,6 +643,13 @@ def calculate_hra_exemption_for_period(doc):
 	return {}
 
 
+@erpnext.allow_regional
+def calculate_tax_with_marginal_relief(tax_slab, tax_amount, annual_taxable_earning):
+	# Don't delete this method, used for localization
+	# Indian TDS Calculation
+	return None
+
+
 def get_previous_claimed_amount(employee, payroll_period, non_pro_rata=False, component=False):
 	total_claimed_amount = 0
 	query = """
@@ -678,7 +689,9 @@ def share_doc_with_approver(doc, user):
 			doc.doctype, doc.name, user, submit=1, flags={"ignore_share_permission": True}
 		)
 
-		frappe.msgprint(_("Shared with the user {0} with 'submit' permisions").format(user, alert=True))
+		frappe.msgprint(
+			_("Shared document with the user {0} with 'Submit' permission").format(user), alert=True
+		)
 
 	# remove shared doc if approver changes
 	doc_before_save = doc.get_doc_before_save()
@@ -783,9 +796,9 @@ def get_ec_matching_query(
 		ref_rank = frappe.qb.terms.Case().when(ec.employee == common_filters.party, 1).else_(0) + 1
 
 		if exact_match:
-			filters.append(ec.total_sanctioned_amount == common_filters.amount)
+			filters.append(ec.total_amount_reimbursed == common_filters.amount)
 		else:
-			filters.append(ec.total_sanctioned_amount.gt(common_filters.amount))
+			filters.append(ec.total_amount_reimbursed.gt(common_filters.amount))
 	else:
 		ref_rank = ConstantColumn(1)
 
@@ -796,6 +809,7 @@ def get_ec_matching_query(
 		qb.from_(ec)
 		.select(
 			ref_rank.as_("rank"),
+			ConstantColumn("Expense Claim").as_("doctype"),
 			ec.name,
 			ec.total_sanctioned_amount.as_("paid_amount"),
 			ConstantColumn("").as_("reference_no"),
@@ -921,6 +935,6 @@ def get_exact_month_diff(string_ed_date: DateTimeLikeObject, string_st_date: Dat
 	# count the last month only if end date's day > start date's day
 	# to handle cases like 16th Jul 2024 - 15th Jul 2025
 	# where framework's month_diff will calculate diff as 13 months
-	if ed_date.day > st_date.day:
+	if ed_date.day >= st_date.day:
 		diff += 1
 	return diff

@@ -32,6 +32,9 @@ def execute(filters: Filters | None = None) -> tuple:
 	if not (filters.month and filters.year):
 		frappe.throw(_("Please select month and year."))
 
+	if not filters.company:
+		frappe.throw(_("Please select company."))
+
 	if filters.company:
 		filters.companies = [filters.company]
 		if filters.include_company_descendants:
@@ -644,9 +647,9 @@ def get_chart_data(attendance_map: dict, filters: Filters) -> dict:
 		"data": {
 			"labels": labels,
 			"datasets": [
-				{"name": "Absent", "values": absent},
-				{"name": "Present", "values": present},
-				{"name": "Leave", "values": leave},
+				{"name": _("Absent"), "values": absent},
+				{"name": _("Present"), "values": present},
+				{"name": _("Leave"), "values": leave},
 			],
 		},
 		"type": "line",

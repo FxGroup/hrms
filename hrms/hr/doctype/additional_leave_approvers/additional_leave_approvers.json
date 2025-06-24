@@ -1,0 +1,49 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-04-24 08:32:27.250105",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "leave_approver",
+  "column_break_auhc",
+  "notification_level"
+ ],
+ "fields": [
+  {
+   "fieldname": "leave_approver",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Leave Approver",
+   "options": "User"
+  },
+  {
+   "fieldname": "column_break_auhc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "0 - Same notifications as main leave approver.\n<br>\n1 -  All Notifications\n<br>\n2 - Approved/Rejected Notifications\n<br>\n3 - Approved Notification",
+   "fieldname": "notification_level",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Notification Level",
+   "options": "0\n1\n2\n3"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-06-24 12:03:44.457737",
+ "modified_by": "Administrator",
+ "module": "HR",
+ "name": "Additional Leave Approvers",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

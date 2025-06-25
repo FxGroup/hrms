@@ -46,6 +46,133 @@ frappe.ui.form.on("Leave Application", {
 			frm.doc.half_day_date = "";
 		}
 		frm.toggle_reqd("half_day_date", cint(frm.doc.half_day));
+
+		if (frm.doc.from_date && frm.doc.to_date) {
+			frappe.db.get_value("Payroll Settings", { name: "Payroll Settings" }, "payroll_start", (r) => {
+				if (
+					r && r.payroll_start &&
+					(frm.doc.to_date < r.payroll_start || frm.doc.from_date < r.payroll_start)
+				) {
+					frappe.validated = false;
+
+					let original_from = frm.doc.from_date;
+					let original_to = frm.doc.to_date;
+
+					let original_hours = frm.doc.total_leave_hours || 0;
+					let original_minutes = frm.doc.total_leave_minutes || 0;
+					let target_total_minutes = (original_hours * 60) + original_minutes;
+
+					let original_weekday = frappe.datetime.str_to_obj(original_from).getDay();
+					let original_day_diff = frappe.datetime.get_diff(original_to, original_from);
+
+					frappe.confirm(
+						"You are submitting this application before the current payroll period. We only allow applications within the current payroll period. Would you like to adjust the dates to fit within the current period?",
+						function () {
+							let payroll_start_obj = frappe.datetime.str_to_obj(r.payroll_start);
+							let max_end_obj = frappe.datetime.add_days(payroll_start_obj, 13);
+							let new_start_obj = new Date(payroll_start_obj);
+
+							while (new_start_obj <= max_end_obj && new_start_obj.getDay() !== original_weekday) {
+								new_start_obj = frappe.datetime.add_days(new_start_obj, 1);
+							}
+
+							if (new_start_obj > max_end_obj) {
+								new_start_obj = payroll_start_obj;
+							}
+
+							let new_from = frappe.datetime.obj_to_str(new_start_obj);
+							let new_to = frappe.datetime.add_days(new_start_obj, original_day_diff);
+							let temp_to_date = frappe.datetime.add_days(new_from, 30);
+
+							frappe.call({
+								method: "hrms.hr.doctype.leave_application.leave_application.get_leave_schedule",
+								args: {
+									employee: frm.doc.employee,
+									from_date: new_from,
+									to_date: new_to,
+									half_day: 0,
+									half_day_date: null,
+									partial_hours_leave: 0,
+									partial_minutes_leave: 0
+								},
+								callback: function (res) {
+									if (res && res.message) {
+										let schedule = res.message.leave_table;
+										let accumulated = 0;
+										let selected_schedule = [];
+
+										for (let i = 0; i < schedule.length; i++) {
+											let entry = schedule[i];
+											let minutes = (parseFloat(entry.hours) * 60) + parseFloat(entry.minutes);
+
+											if (accumulated + minutes < target_total_minutes) {
+												selected_schedule.push({ ...entry });
+												accumulated += minutes;
+											} else {
+												let remaining = target_total_minutes - accumulated;
+												let partial_hours = Math.floor(remaining / 60);
+												let partial_minutes = remaining % 60;
+
+												selected_schedule.push({
+													hours: partial_hours,
+													minutes: partial_minutes,
+													day: entry.day
+												});
+												break;
+											}
+										}
+
+										let final_to_date = frappe.datetime.add_days(
+											new_from,
+											selected_schedule.length - 1
+										);
+
+										let note = frm.doc.description ? `${frm.doc.description}\n` : "";
+										note += `User confirmed early submission before payroll period. Original dates: ${original_from} to ${original_to}, totaling ${original_hours}h ${original_minutes}m. New application period is from ${new_from} to ${final_to_date}.`;
+
+										frm.set_value("from_date", new_from);
+										frm.set_value("to_date", final_to_date);
+										frm.set_value("total_leave_hours", original_hours);
+										frm.set_value("total_leave_minutes", original_minutes);
+										frm.set_value("description", note);
+										frm.set_value("prev_period_application", 1);
+
+										frm.clear_table("leave_days");
+										selected_schedule.forEach((entry, idx) => {
+											let leave_date = frappe.datetime.add_days(new_from, idx);
+											frm.add_child("leave_days", {
+												leave_date: leave_date,
+												leave_hours: entry.hours,
+												leave_minutes: entry.minutes
+											});
+										});
+
+										frm.refresh_field("leave_days");
+										frm.toggle_display("leave_days", true);
+										frm.toggle_display("total_leave_hours", true);
+										frm.toggle_display("total_leave_minutes", true);
+
+										frappe.show_alert({
+											message: __("Leave application dates were adjusted. Please save again."),
+											indicator: "blue"
+										});
+									} else {
+										frappe.msgprint("Could not rebuild leave schedule. Please try again.");
+									}
+								}
+							});
+						},
+						function () {
+							["from_date", "to_date", "leave_days", "total_leave_hours", "total_leave_minutes", "total_leave_days"].forEach((field) => {
+								frm.set_value(field, null);
+								frm.toggle_display(field, false);
+							});
+							frappe.validated = false;
+						}
+					);
+				}
+			});
+		}
 	},
 
 	make_dashboard: function (frm) {
@@ -349,39 +476,6 @@ frappe.ui.form.on("Leave Application", {
 						frm.refresh_field("additional_leave_approvers");
 					}
 				},
-			});
-		}
-	},
-	before_save: function (frm) {
-		if (frm.doc.from_date && frm.doc.to_date) {
-			return new Promise((resolve, reject) => {
-				frappe.db.get_value("Payroll Settings", { 'name': 'Payroll Settings' }, "payroll_start", (r) => {
-					if (r && r.payroll_start &&
-						(frm.doc.to_date < r.payroll_start || frm.doc.from_date < r.payroll_start)) {
-						frappe.confirm(
-							'You are submitting this application before the current payroll period. Do you want to continue?',
-							function () {
-								let note = 'User confirmed early submission before payroll period.';
-								frm.doc.description = (frm.doc.description || '') + `\n${note}`;
-								frm.set_value('prev_period_application', 1);
-								resolve();
-							},
-							function () {
-								['from_date', 'to_date', 'leave_days', 'total_leave_hours', 'total_leave_minutes', 'total_leave_days'].forEach((field) => {
-									frm.set_value(field, null);
-								});
-
-								['leave_days', 'total_leave_hours', 'total_leave_minutes', 'total_leave_days'].forEach((field) => {
-									frm.toggle_display(field, false);
-								});
-
-								reject();
-							}
-						);
-					} else {
-						resolve();
-					}
-				});
 			});
 		}
 	},

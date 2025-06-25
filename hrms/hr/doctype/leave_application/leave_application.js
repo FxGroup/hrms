@@ -63,28 +63,26 @@ frappe.ui.form.on("Leave Application", {
 					let target_total_minutes = (original_hours * 60) + original_minutes;
 
 					let original_weekday = frappe.datetime.str_to_obj(original_from).getDay();
-					let original_day_diff = frappe.datetime.get_diff(original_to, original_from); // in days
+					let original_day_diff = frappe.datetime.get_diff(original_to, original_from);
 
 					frappe.confirm(
 						"You are submitting this application before the current payroll period. We only allow applications within the current payroll period. Would you like to adjust the dates to fit within the current period?",
 						function () {
 							let payroll_start_obj = frappe.datetime.str_to_obj(r.payroll_start);
-							let max_end_obj = frappe.datetime.add_days(payroll_start_obj, 13); // 14-day period
+							let max_end_obj = frappe.datetime.add_days(payroll_start_obj, 13);
 							let new_start_obj = new Date(payroll_start_obj);
 
-							// Find next matching weekday within payroll period
 							while (new_start_obj <= max_end_obj && new_start_obj.getDay() !== original_weekday) {
 								new_start_obj = frappe.datetime.add_days(new_start_obj, 1);
 							}
 
-							// If not found in payroll period (shouldn't happen), fallback to payroll_start
 							if (new_start_obj > max_end_obj) {
 								new_start_obj = payroll_start_obj;
 							}
 
 							let new_from = frappe.datetime.obj_to_str(new_start_obj);
 							let new_to = frappe.datetime.add_days(new_start_obj, original_day_diff);
-							let temp_to_date = frappe.datetime.add_days(new_from, 30); // buffer for get_leave_schedule
+							let temp_to_date = frappe.datetime.add_days(new_from, 30);
 
 							frappe.call({
 								method: "hrms.hr.doctype.leave_application.leave_application.get_leave_schedule",

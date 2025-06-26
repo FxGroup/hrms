@@ -980,7 +980,7 @@ def get_number_of_leave_days(
 	
 	from_date = from_date.strftime("%Y-%m-%d")
 	to_date = to_date.strftime("%Y-%m-%d")
-	if half_day:
+	if half_day and isinstance(half_day_date, datetime):
 		half_day_date = half_day_date.strftime("%Y-%m-%d")
       
 	leave_days = get_leave_schedule(from_date=from_date, to_date=to_date, employee=employee, half_day=half_day, half_day_date=half_day_date, partial_hours_leave=partial_hours, partial_minutes_leave=partial_minutes_leave)

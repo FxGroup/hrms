@@ -96,13 +96,7 @@ class LeaveApplicationSummary:
 				"width": 130
 			},
 			{
-				"label": "Total Leave Hours",
-				"fieldname": "total_leave_hours",
-				"fieldtype": "Float",
-				"width": 130
-			},
-			{
-				"label": "Total Leave Minutes",
+				"label": "Total Minutes",
 				"fieldname": "total_leave_minutes",
 				"fieldtype": "Float",
 				"width": 130

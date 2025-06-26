@@ -25,6 +25,7 @@ from erpnext.setup.doctype.employee.employee import get_holiday_list_for_employe
 from erpnext import get_default_company
 
 import hrms
+import json
 from hrms.api import get_current_employee_info
 from hrms.hr.doctype.leave_block_list.leave_block_list import get_applicable_block_dates
 from hrms.hr.doctype.leave_ledger_entry.leave_ledger_entry import create_leave_ledger_entry
@@ -38,6 +39,7 @@ from hrms.hr.utils import (
 from hrms.mixins.pwa_notifications import PWANotificationsMixin
 from hrms.utils import get_employee_email
 from fxnmrnth import get_site_name
+from datetime import datetime, timedelta
 
 # TODO: Fix the on submission logic for updating the partial day
 
@@ -106,6 +108,7 @@ class LeaveApplication(Document, PWANotificationsMixin):
 		if frappe.db.get_value("Leave Type", self.leave_type, "is_optional_leave"):
 			self.validate_optional_leave()
 		self.validate_applicable_after()
+		self.validate_leave_days()
 
 	def on_update(self):
 		share_doc_with_approver(self, self.leave_approver)
@@ -899,6 +902,11 @@ class LeaveApplication(Document, PWANotificationsMixin):
 			"self_leave_approval_not_allowed",
 			frappe.db.get_single_value("HR Settings", "prevent_self_leave_approval"),
 		)
+  
+	def validate_leave_days(self):
+		"""Validates if the total leave days are greater than 0"""
+		if len(self.leave_days) == 0:
+			frappe.throw(_("Leave Days schedule is required for applications.<br><br>Please reset the to and from date to populate the leave table."))
 
 
 def get_allocation_expiry_for_cf_leaves(
@@ -970,6 +978,15 @@ def get_number_of_leave_days(
 		holidays = flt(get_holidays(employee, from_date, to_date, holiday_list=holiday_list))
 		number_of_days = flt(number_of_days) - holidays
 		number_of_days = max(0.0, number_of_days)
+	
+	from_date = from_date.strftime("%Y-%m-%d")
+	to_date = to_date.strftime("%Y-%m-%d")
+	if half_day:
+		half_day_date = half_day_date.strftime("%Y-%m-%d")
+      
+	leave_days = get_leave_schedule(from_date=from_date, to_date=to_date, employee=employee, half_day=half_day, half_day_date=half_day_date, partial_hours_leave=partial_hours, partial_minutes_leave=partial_minutes_leave)
+	if leave_days.get('leave_table'):
+		number_of_days = len([item for item in leave_days.get('leave_table') if int(item.get("hours")) > 0 or int(item.get("minutes")) > 0])
 
 	return number_of_days
 
@@ -1526,7 +1543,7 @@ import frappe
 from datetime import datetime, timedelta
 
 @frappe.whitelist()
-def get_leave_schedule(employee, from_date, to_date, half_day, half_day_date, partial_hours_leave=0, partial_minutes_leave=0):
+def get_leave_schedule(employee, from_date, to_date, half_day=0, half_day_date=None, partial_hours_leave=0, partial_minutes_leave=0):
 	emp_doc = frappe.get_doc("Employee", employee)
 	default_schedule = []
 
@@ -1579,4 +1596,103 @@ def get_leave_schedule(employee, from_date, to_date, half_day, half_day_date, pa
 		"leave_table": leave_table,
 		"total_leave_hours": total_hours,
 		"total_leave_minutes": total_minutes
+	}
+
+@frappe.whitelist()
+def get_leave_range(employee, from_date, to_date, total_hours_leave, total_minutes_leave, leave_days, half_day, partial_day_date, partial_hours_leave, partial_minutes_leave):
+	emp_doc = frappe.get_doc("Employee", employee)
+	payroll_period_start_str = frappe.db.get_value("Payroll Settings", "Payroll Settings", "payroll_start")
+	default_schedule = []
+
+	for item in emp_doc.work_hours:
+		default_schedule.append({
+			"day": item.day,
+			"hours": int(item.hours),
+			"minutes": int(item.minutes),
+		})
+
+	if not default_schedule:
+		return
+
+	from_date_dt = datetime.strptime(from_date, "%Y-%m-%d")
+	to_date_dt = datetime.strptime(to_date, "%Y-%m-%d")
+	payroll_period_start = datetime.strptime(payroll_period_start_str, "%Y-%m-%d")
+
+	from_day = from_date_dt.strftime('%A')
+	to_day = to_date_dt.strftime('%A')
+
+	if isinstance(leave_days, str):
+		leave_days = json.loads(leave_days)
+	if isinstance(half_day, str):
+		half_day = int(half_day)
+	if isinstance(partial_hours_leave, str):
+		partial_hours_leave = int(partial_hours_leave)
+	if isinstance(partial_minutes_leave, str):
+		partial_minutes_leave = int(partial_minutes_leave)
+
+	def get_next_weekday_date(start_date, target_weekday):
+		"""Returns the next date >= start_date that falls on the target_weekday"""
+		days_ahead = (target_weekday - start_date.weekday()) % 7
+		return start_date + timedelta(days=days_ahead)
+
+	weekday_map = {
+		"Monday": 0, "Tuesday": 1, "Wednesday": 2,
+		"Thursday": 3, "Friday": 4, "Saturday": 5, "Sunday": 6
+	}
+
+	from_day_idx = weekday_map[from_day]
+	to_day_idx = weekday_map[to_day]
+
+	candidate_start = get_next_weekday_date(max(payroll_period_start, from_date_dt), from_day_idx)
+	candidate_end = get_next_weekday_date(max(payroll_period_start, to_date_dt), to_day_idx)
+
+	if candidate_start > candidate_end:
+		candidate_end = get_next_weekday_date(candidate_start, to_day_idx)
+
+	calculated_start_date = candidate_start
+	calculated_end_date = candidate_end
+
+	updated_partial_day_date = None
+	updated_partial_day_dt = None
+	if half_day and partial_day_date:
+		try:
+			partial_day_dt = datetime.strptime(partial_day_date, "%Y-%m-%d")
+			partial_day_name = partial_day_dt.strftime('%A')
+			partial_day_idx = weekday_map[partial_day_name]
+			updated_partial_day_dt = get_next_weekday_date(payroll_period_start, partial_day_idx)
+			updated_partial_day_date = updated_partial_day_dt.strftime("%Y-%m-%d")
+		except ValueError:
+			pass
+
+	leave_schedule = get_leave_schedule(
+		employee=employee,
+		from_date=calculated_start_date.strftime("%Y-%m-%d"),
+		to_date=calculated_end_date.strftime("%Y-%m-%d"),
+		half_day=half_day,
+		half_day_date=updated_partial_day_date,
+		partial_hours_leave=partial_hours_leave,
+		partial_minutes_leave=partial_minutes_leave
+	)
+
+	new_leave_days = leave_schedule.get('leave_table', [])
+
+	if half_day and updated_partial_day_dt:
+		partial_day_name = updated_partial_day_dt.strftime('%A')
+		for item in new_leave_days:
+			if item['day'] == partial_day_name:
+				item['hours'] = partial_hours_leave
+				item['minutes'] = partial_minutes_leave
+				break
+
+	for item in new_leave_days:
+		item['hours'] = int(item.get('hours', 0))
+		item['minutes'] = int(item.get('minutes', 0))
+
+	return {
+		"leave_table": new_leave_days,
+		"total_leave_hours": int(total_hours_leave),
+		"total_leave_minutes": int(total_minutes_leave),
+		"start_date": calculated_start_date.strftime("%Y-%m-%d"),
+		"end_date": calculated_end_date.strftime("%Y-%m-%d"),
+		"adjusted_partial_day_date": updated_partial_day_date
 	}

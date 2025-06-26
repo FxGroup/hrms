@@ -91,12 +91,18 @@ class LeaveApplicationSummary:
 			},
 			{
 				"label": "Total Hours",
+				"fieldname": "total_hours",
+				"fieldtype": "Float",
+				"width": 130
+			},
+			{
+				"label": "Total Leave Hours",
 				"fieldname": "total_leave_hours",
 				"fieldtype": "Float",
 				"width": 130
 			},
 			{
-				"label": "Total Minutes",
+				"label": "Total Leave Minutes",
 				"fieldname": "total_leave_minutes",
 				"fieldtype": "Float",
 				"width": 130
@@ -155,7 +161,6 @@ class LeaveApplicationSummary:
 		conds += " and workflow_state != 'Cancelled'"
 		conds += " and workflow_state != 'Rejected'"
   
-   
 		data = frappe.db.sql(f"""
 			SELECT
 				workflow_state,
@@ -170,7 +175,6 @@ class LeaveApplicationSummary:
 				half_day_date,
 				total_leave_days,
 				total_leave_hours,
-				total_leave_minutes,
 				leave_approver,
 				approver_comments,
 				description
@@ -182,6 +186,14 @@ class LeaveApplicationSummary:
 			ORDER BY
 				NAME DESC
 		""", as_dict=True)
+  
+		for row in data:
+			hours = row.get("total_leave_hours") or 0
+			minutes = row.get("total_leave_minutes") or 0
+			try:
+				row["total_hours"] = round(float(hours) + float(minutes) / 60.0, 2)
+			except (TypeError, ValueError):
+				row["total_hours"] = 0.0
   
 		# Makes that last row of the report readable.
 		data.append({

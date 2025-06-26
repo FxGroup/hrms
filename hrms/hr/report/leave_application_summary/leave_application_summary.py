@@ -174,6 +174,7 @@ class LeaveApplicationSummary:
 				prev_period_application,
 				half_day_date,
 				total_leave_days,
+				total_leave_minutes,
 				total_leave_hours,
 				leave_approver,
 				approver_comments,

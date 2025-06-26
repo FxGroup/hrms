@@ -90,13 +90,19 @@ class LeaveApplicationSummary:
 				"width": 150
 			},
 			{
-				"label": "Total Hours",
+				"label": "Total Leave in Hours",
 				"fieldname": "total_hours",
+				"fieldtype": "Float",
+				"width": 160
+			},
+   			{
+				"label": "Leave Hours",
+				"fieldname": "total_leave_hours",
 				"fieldtype": "Float",
 				"width": 130
 			},
 			{
-				"label": "Total Minutes",
+				"label": "Leave Minutes",
 				"fieldname": "total_leave_minutes",
 				"fieldtype": "Float",
 				"width": 130

@@ -986,7 +986,7 @@ def get_number_of_leave_days(
 	leave_days = get_leave_schedule(from_date=from_date, to_date=to_date, employee=employee, half_day=half_day, half_day_date=half_day_date, partial_hours_leave=partial_hours, partial_minutes_leave=partial_minutes_leave)
 
 	if leave_days and leave_days.get('leave_table'):
-		number_of_days = len([item for item in leave_days.get('leave_table') if int(item.get("hours")) > 0 or int(item.get("minutes")) > 0])
+		number_of_days = len([item for item in leave_days.get('leave_table') if float(item.get("hours")) > 0 or int(item.get("minutes")) > 0])
 
 	return number_of_days
 
@@ -1559,7 +1559,13 @@ def get_leave_schedule(employee, from_date, to_date, half_day=0, half_day_date=N
 
 	from_dt = datetime.strptime(from_date, "%Y-%m-%d")
 	to_dt = datetime.strptime(to_date, "%Y-%m-%d")
-	half_day_dt = datetime.strptime(half_day_date, "%Y-%m-%d") if half_day and half_day_date else None
+	if half_day and half_day_date:
+		if isinstance(half_day_date, str):
+			half_day_dt = datetime.strptime(half_day_date, "%Y-%m-%d")
+		else:
+			half_day_dt = half_day_date
+	else:
+		half_day_dt = None
 
 	leave_table = []
 	total_hours = 0

@@ -39,7 +39,6 @@ from hrms.hr.utils import (
 from hrms.mixins.pwa_notifications import PWANotificationsMixin
 from hrms.utils import get_employee_email
 from fxnmrnth import get_site_name
-from datetime import datetime, timedelta
 
 # TODO: Fix the on submission logic for updating the partial day
 
@@ -985,7 +984,8 @@ def get_number_of_leave_days(
 		half_day_date = half_day_date.strftime("%Y-%m-%d")
       
 	leave_days = get_leave_schedule(from_date=from_date, to_date=to_date, employee=employee, half_day=half_day, half_day_date=half_day_date, partial_hours_leave=partial_hours, partial_minutes_leave=partial_minutes_leave)
-	if leave_days.get('leave_table'):
+
+	if leave_days and leave_days.get('leave_table'):
 		number_of_days = len([item for item in leave_days.get('leave_table') if int(item.get("hours")) > 0 or int(item.get("minutes")) > 0])
 
 	return number_of_days

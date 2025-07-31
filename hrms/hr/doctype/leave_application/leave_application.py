@@ -155,6 +155,35 @@ class LeaveApplication(Document, PWANotificationsMixin):
 		self.db_set("workflow_state", "Cancelled")
 		self.publish_update()
 
+	def before_insert(self):
+		"""
+		Preventing leave application from being created on the last Friday, Saturday, or Sunday of a payroll period - as per request of Accounts Team.
+		"""
+		if "HR Manager" in frappe.get_roles() or "Administrator" in frappe.get_roles():
+			frappe.msgprint("Skipping payroll cutoff validation for Accounts Officer or Administrator users.")
+			return
+
+		payroll_period_start_str = frappe.db.get_value("Payroll Settings", "Payroll Settings", "payroll_start")
+		payroll_period_end_str = frappe.db.get_value("Payroll Settings", "Payroll Settings", "payroll_end")
+		current_date = getdate()
+
+		if payroll_period_start_str and payroll_period_end_str:
+			payroll_period_start = getdate(payroll_period_start_str)
+			payroll_period_end = getdate(payroll_period_end_str)						
+			
+			friday_before_payroll_end = payroll_period_end - timedelta(days=2)
+			satuday_before_payroll_end = payroll_period_end - timedelta(days=1)
+			leave_from_date = getdate(self.from_date)
+			leave_to_date = getdate(self.to_date)
+
+			if current_date == friday_before_payroll_end or current_date == satuday_before_payroll_end or current_date == payroll_period_end:
+				if (leave_from_date <= payroll_period_end and leave_to_date >= payroll_period_start):
+					frappe.throw(
+						"<b>Leave applications affecting the current pay period cannot be created on the last Friday, Saturday, or Sunday of the payroll schedule.</b><br><br>"
+						f"Current pay period: {payroll_period_start.strftime('%d %B %Y')} to {payroll_period_end.strftime('%d %B %Y')}. "
+						"<br><br>Please select dates in future pay periods, or contact HR for urgent assistance.",
+						title="Leave Application Submission Blocked"
+					)		
 
 	def after_delete(self):
 		self.publish_update()

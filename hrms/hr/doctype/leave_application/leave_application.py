@@ -159,9 +159,6 @@ class LeaveApplication(Document, PWANotificationsMixin):
 		"""
 		Preventing leave application from being created on the last Friday, Saturday, or Sunday of a payroll period - as per request of Accounts Team.
 		"""
-		if "HR Manager" in frappe.get_roles() or "Administrator" in frappe.get_roles():
-			frappe.msgprint("Skipping leave application prevention for Accounts Officers or Administrators.")
-			return
 
 		payroll_period_start_str = frappe.db.get_value("Payroll Settings", "Payroll Settings", "payroll_start")
 		payroll_period_end_str = frappe.db.get_value("Payroll Settings", "Payroll Settings", "payroll_end")
@@ -178,12 +175,16 @@ class LeaveApplication(Document, PWANotificationsMixin):
 
 			if current_date == friday_before_payroll_end or current_date == satuday_before_payroll_end or current_date == payroll_period_end:
 				if (leave_from_date <= payroll_period_end and leave_to_date >= payroll_period_start):
-					frappe.throw(
-						"<b>Leave applications affecting the current pay period cannot be created on the last Friday, Saturday, or Sunday of the payroll schedule.</b><br><br>"
-						f"Current pay period: {payroll_period_start.strftime('%d %B %Y')} to {payroll_period_end.strftime('%d %B %Y')}. "
-						"<br><br>Please select dates in future pay periods, or contact HR for urgent assistance.",
-						title="Leave Application Submission Blocked"
-					)		
+					if "HR Manager" in frappe.get_roles() or "Administrator" in frappe.get_roles():
+						frappe.msgprint("Skipping leave application prevention for Accounts Officers or Administrators.")
+						return
+					else:
+						frappe.throw(
+							"<b>Leave applications affecting the current pay period cannot be created on the last Friday, Saturday, or Sunday of the payroll schedule.</b><br><br>"
+							f"Current pay period: {payroll_period_start.strftime('%d %B %Y')} to {payroll_period_end.strftime('%d %B %Y')}. "
+							"<br><br>Please select dates in future pay periods, or contact HR for urgent assistance.",
+							title="Leave Application Submission Blocked"
+						)		
 
 	def after_delete(self):
 		self.publish_update()

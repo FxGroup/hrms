@@ -160,7 +160,7 @@ class LeaveApplication(Document, PWANotificationsMixin):
 		Preventing leave application from being created on the last Friday, Saturday, or Sunday of a payroll period - as per request of Accounts Team.
 		"""
 		if "HR Manager" in frappe.get_roles() or "Administrator" in frappe.get_roles():
-			frappe.msgprint("Skipping payroll cutoff validation for Accounts Officer or Administrator users.")
+			frappe.msgprint("Skipping leave application prevention for Accounts Officers or Administrators.")
 			return
 
 		payroll_period_start_str = frappe.db.get_value("Payroll Settings", "Payroll Settings", "payroll_start")

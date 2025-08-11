@@ -1574,7 +1574,7 @@ import frappe
 from datetime import datetime, timedelta
 
 @frappe.whitelist()
-def get_leave_schedule(employee, from_date, to_date, half_day=0, half_day_date=None, partial_hours_leave=0, partial_minutes_leave=0):
+def get_leave_schedule(employee, from_date, to_date, half_day=0, half_day_date=None, partial_hours_leave=0, partial_minutes_leave=0, zero_hours=0):
 	emp_doc = frappe.get_doc("Employee", employee)
 	default_schedule = []
 
@@ -1612,8 +1612,12 @@ def get_leave_schedule(employee, from_date, to_date, half_day=0, half_day_date=N
 		schedule_index = weekday_index if current_day < from_dt + timedelta(days=7) else weekday_index + 7
 		schedule_entry = default_schedule[schedule_index]
 
-		leave_hours = schedule_entry["hours"]
-		leave_minutes = schedule_entry["minutes"]
+		if zero_hours:
+			leave_hours = 0
+			leave_minutes = 0
+		else:
+			leave_hours = schedule_entry["hours"]
+			leave_minutes = schedule_entry["minutes"]
 
 		if half_day and current_day == half_day_dt:
 			leave_hours = partial_hours_leave
@@ -1625,12 +1629,15 @@ def get_leave_schedule(employee, from_date, to_date, half_day=0, half_day_date=N
 			"minutes": str(leave_minutes)
 		})
 
-		total_hours += float(leave_hours)
-		total_minutes += float(leave_minutes)
+		if not zero_hours:
+			total_hours += float(leave_hours)
+			total_minutes += float(leave_minutes)
+   
 		current_day += timedelta(days=1)
 
-	total_hours += total_minutes // 60
-	total_minutes = total_minutes % 60
+	if not zero_hours:
+		total_hours += total_minutes // 60
+		total_minutes = total_minutes % 60
 
 	return {
 		"leave_table": leave_table,

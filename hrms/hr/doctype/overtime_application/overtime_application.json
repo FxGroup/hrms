@@ -16,17 +16,17 @@
   "overtime_type",
   "company",
   "section_break_2",
-  "to_date",
-  "column_break_zjdy",
   "from_date",
+  "column_break_zjdy",
+  "to_date",
   "section_break_acwx",
   "overtime_days",
   "section_break_qwje",
-  "total_leave_days",
+  "total_overtime_days",
   "column_break_hnxq",
-  "total_leave_hours",
+  "total_overtime_hours",
   "column_break_ebvv",
-  "total_leave_minutes",
+  "total_overtime_minutes",
   "approval_section",
   "leave_approver",
   "leave_approver_name",
@@ -100,26 +100,6 @@
    "fieldname": "section_break_2",
    "fieldtype": "Section Break",
    "label": "Dates & Reasons"
-  },
-  {
-   "fieldname": "total_leave_days",
-   "fieldtype": "Float",
-   "in_standard_filter": 1,
-   "label": "Total Leave Days",
-   "no_copy": 1,
-   "read_only": 1
-  },
-  {
-   "fieldname": "total_leave_hours",
-   "fieldtype": "Float",
-   "label": "Total Leave Hours",
-   "read_only": 1
-  },
-  {
-   "fieldname": "total_leave_minutes",
-   "fieldtype": "Float",
-   "label": "Total Leave Minutes",
-   "read_only": 1
   },
   {
    "fieldname": "approval_section",
@@ -213,7 +193,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "default": "Today",
    "fieldname": "from_date",
    "fieldtype": "Date",
    "in_list_view": 1,
@@ -224,13 +203,33 @@
   {
    "fieldname": "section_break_acwx",
    "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "total_overtime_days",
+   "fieldtype": "Float",
+   "in_standard_filter": 1,
+   "label": "Total Overtime Days",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_overtime_hours",
+   "fieldtype": "Float",
+   "label": "Total Overtime Hours",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_overtime_minutes",
+   "fieldtype": "Float",
+   "label": "Total Overtime Minutes",
+   "read_only": 1
   }
  ],
  "grid_page_length": 50,
  "icon": "fa fa-calendar",
  "is_submittable": 1,
  "links": [],
- "modified": "2025-08-11 12:48:03.442622",
+ "modified": "2025-08-11 15:31:37.417498",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Overtime Application",

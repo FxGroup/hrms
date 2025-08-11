@@ -24,6 +24,9 @@
   "send_leave_notification",
   "leave_approval_notification_template",
   "leave_status_notification_template",
+  "send_overtime_notification",
+  "leave_overtime_notification",
+  "overtime_status_notification_template",
   "leave_approver_mandatory_in_leave_application",
   "restrict_backdated_leave_application",
   "prevent_self_leave_approval",
@@ -336,13 +339,35 @@
    "fieldname": "prevent_self_leave_approval",
    "fieldtype": "Check",
    "label": "Prevent self approval for leaves even if user has permissions"
+  },
+  {
+   "default": "1",
+   "fieldname": "send_overtime_notification",
+   "fieldtype": "Check",
+   "label": "Send Overtime Notification"
+  },
+  {
+   "depends_on": "eval: doc.send_overtime_notification == 1",
+   "fieldname": "overtime_status_notification_template",
+   "fieldtype": "Link",
+   "label": "Overtime Status Notification Template",
+   "mandatory_depends_on": "eval: doc.send_leave_notification == 1",
+   "options": "Email Template"
+  },
+  {
+   "depends_on": "eval: doc.send_overtime_notification == 1",
+   "fieldname": "leave_overtime_notification",
+   "fieldtype": "Link",
+   "label": "Overtime Approval Notification Template",
+   "mandatory_depends_on": "eval: doc.send_leave_notification == 1",
+   "options": "Email Template"
   }
  ],
  "icon": "fa fa-cog",
  "idx": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-01-30 12:41:22.594071",
+ "modified": "2025-08-12 07:47:30.320769",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "HR Settings",
@@ -377,6 +402,7 @@
    "role": "Employee"
   }
  ],
+ "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "ASC",
  "states": [],

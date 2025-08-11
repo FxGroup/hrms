@@ -25,15 +25,16 @@ class OvertimeApplication(Document):
 
 	def notify_leave_approver(self):
 		if self.leave_approver:
-			parent_doc = frappe.get_doc("Leave Application", self.name)
+			parent_doc = frappe.get_doc("Overtime Application", self.name)
 			args = parent_doc.as_dict()
 
-			template = frappe.db.get_single_value("HR Settings", "leave_approval_notification_template")
+			template = frappe.db.get_single_value("HR Settings", "overtime_approval_notification_template")
 			if not template:
 				frappe.msgprint(
-					_("Please set default template for Leave Approval Notification in HR Settings.")
+					_("Please set default template for Overtime Approval Notification in HR Settings.")
 				)
 				return
+
 			email_template = frappe.get_doc("Email Template", template)
 			subject = frappe.render_template(email_template.subject, args)
 			message = frappe.render_template(email_template.response_, args)
@@ -41,10 +42,8 @@ class OvertimeApplication(Document):
 
 			self.notify(
 				{
-					# for post in messages
 					"message": message,
 					"message_to": message_to,
-					# for email
 					"subject": subject,
 				}
 			)
@@ -52,7 +51,7 @@ class OvertimeApplication(Document):
 	def notify_accounts(self):
 		try:
 			applicant_name = self.employee_name
-			subject = _("Leave approval for {0}").format(applicant_name)
+			subject = _("Overtime approval for {0}").format(applicant_name)
 			company = get_default_company()
 			reports_to_user = frappe.db.get_value("Employee", self.employee, "reports_to", cache=True)
 			reports_to_email = frappe.db.get_value("Employee", reports_to_user, "user_id", cache=True)
@@ -71,7 +70,7 @@ class OvertimeApplication(Document):
 				}
 			)
 		except Exception as e:
-			frappe.log_error(message=str(e), title="Leave Approval Email Error")
+			frappe.log_error(message=str(e), title="Overtime Approval Email Error")
 			frappe.msgprint(_("Email unable to be sent. Please notify accounts manually"))
 
 
@@ -93,7 +92,7 @@ class OvertimeApplication(Document):
 			message = _(
 				"{0}"
 				"<br><br>"
-				"You can find the application here: <a href='{3}' target='_blank'>{3}</a>"
+				"You can find the overtime application here: <a href='{3}' target='_blank'>{3}</a>"
 				"<br><br>"
 				"Details:"
 				"<br><br>"

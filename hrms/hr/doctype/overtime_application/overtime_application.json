@@ -1,0 +1,258 @@
+{
+ "actions": [],
+ "allow_import": 1,
+ "allow_rename": 1,
+ "autoname": "OT-LAP-.YYYY.-.#####",
+ "creation": "2025-08-11 11:32:24.725115",
+ "doctype": "DocType",
+ "document_type": "Document",
+ "engine": "InnoDB",
+ "field_order": [
+  "section_break_kcdj",
+  "employee",
+  "employee_name",
+  "amended_from",
+  "column_break_nvvz",
+  "overtime_type",
+  "company",
+  "section_break_2",
+  "to_date",
+  "column_break_zjdy",
+  "from_date",
+  "section_break_acwx",
+  "overtime_days",
+  "section_break_qwje",
+  "total_leave_days",
+  "column_break_hnxq",
+  "total_leave_hours",
+  "column_break_ebvv",
+  "total_leave_minutes",
+  "approval_section",
+  "leave_approver",
+  "leave_approver_name",
+  "follow_via_email",
+  "additional_leave_approvers",
+  "column_break_njxe",
+  "posting_date",
+  "status",
+  "approver_comments"
+ ],
+ "fields": [
+  {
+   "fieldname": "section_break_kcdj",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Overtime Application",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "employee",
+   "fieldtype": "Link",
+   "in_global_search": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Employee",
+   "options": "Employee",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fetch_from": "employee.employee_name",
+   "fieldname": "employee_name",
+   "fieldtype": "Data",
+   "in_global_search": 1,
+   "label": "Employee Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_nvvz",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Time in Lieu",
+   "fieldname": "overtime_type",
+   "fieldtype": "Select",
+   "ignore_user_permissions": 1,
+   "in_standard_filter": 1,
+   "label": "Overtime Type",
+   "options": "Time in Lieu\nEncashment",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fetch_from": "employee.company",
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "read_only": 1,
+   "remember_last_selected_value": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "section_break_2",
+   "fieldtype": "Section Break",
+   "label": "Dates & Reasons"
+  },
+  {
+   "fieldname": "total_leave_days",
+   "fieldtype": "Float",
+   "in_standard_filter": 1,
+   "label": "Total Leave Days",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_leave_hours",
+   "fieldtype": "Float",
+   "label": "Total Leave Hours",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_leave_minutes",
+   "fieldtype": "Float",
+   "label": "Total Leave Minutes",
+   "read_only": 1
+  },
+  {
+   "fieldname": "approval_section",
+   "fieldtype": "Section Break",
+   "label": "Approval"
+  },
+  {
+   "fetch_from": "employee.leave_approver",
+   "fieldname": "leave_approver",
+   "fieldtype": "Link",
+   "label": "Leave Approver",
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_njxe",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Today",
+   "fieldname": "posting_date",
+   "fieldtype": "Date",
+   "label": "Posting Date",
+   "no_copy": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "Status",
+   "no_copy": 1,
+   "options": "Open\nApproved\nRejected\nCancelled",
+   "permlevel": 1,
+   "reqd": 1
+  },
+  {
+   "fieldname": "overtime_days",
+   "fieldtype": "Table",
+   "label": "Overtime Days",
+   "options": "Work Day Schedule"
+  },
+  {
+   "fetch_from": "leave_approver.full_name",
+   "fieldname": "leave_approver_name",
+   "fieldtype": "Data",
+   "label": "Leave Approver Name",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "follow_via_email",
+   "fieldtype": "Check",
+   "label": "Follow via Email"
+  },
+  {
+   "fieldname": "additional_leave_approvers",
+   "fieldtype": "Table",
+   "label": "Additional Leave Approvers",
+   "no_copy": 1,
+   "options": "Additional Leave Approvers",
+   "read_only": 1
+  },
+  {
+   "fieldname": "approver_comments",
+   "fieldtype": "Small Text",
+   "label": "Approver Comments"
+  },
+  {
+   "fieldname": "section_break_qwje",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "column_break_hnxq",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "column_break_ebvv",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "to_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "To Date",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_zjdy",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Today",
+   "fieldname": "from_date",
+   "fieldtype": "Date",
+   "in_list_view": 1,
+   "label": "From Date",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "section_break_acwx",
+   "fieldtype": "Section Break"
+  }
+ ],
+ "grid_page_length": 50,
+ "icon": "fa fa-calendar",
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2025-08-11 12:48:03.442622",
+ "modified_by": "Administrator",
+ "module": "HR",
+ "name": "Overtime Application",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

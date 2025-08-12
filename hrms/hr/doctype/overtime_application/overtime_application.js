@@ -2,6 +2,9 @@
 // For license information, please see license.txt
 
 frappe.ui.form.on("Overtime Application", {
+	validate: function(frm) {
+		clean_days(frm);
+	},
     onload: function(frm) {
         frm.toggle_display('section_break_2', frappe.user.has_role("Leave Approver") || frappe.user.has_role("HR Manager"));
 		
@@ -116,7 +119,7 @@ frappe.ui.form.on('Work Day Schedule', {
 	before_overtime_days_add: function(frm, cdt, cdn) {
 		calculate_overtime_day(frm);
 		calculate_overtime(frm);
-	}
+	},
 });
 
 function calculate_overtime(frm) {
@@ -148,5 +151,30 @@ function calculate_overtime_day(frm) {
 		frm.toggle_display('total_overtime_days', 0);
 		frm.toggle_display('total_overtime_hours', 0);
 		frm.toggle_display('total_overtime_minutes', 0);
+	}
+}
+
+
+function clean_days(frm) {
+	let days = [];
+	let rowsToRemove = [];
+	
+	for (let i = 0; i < frm.doc.overtime_days.length; i++) {
+		let row = frm.doc.overtime_days[i];
+		if (row.hours == 0 && row.minutes == 0) {
+			days.push(row.day);
+			rowsToRemove.push(i);
+		}
+	}
+	
+	for (let i = rowsToRemove.length - 1; i >= 0; i--) {
+		let rowIndex = rowsToRemove[i];
+		frm.doc.overtime_days.splice(rowIndex, 1);
+	}
+
+	if (days.length > 0) {
+		frappe.show_alert(`Removed the following days as hours and minutes were both 0: ${days.join(', ')}`, 5);
+		frm.refresh_field("overtime_days");
+		calculate_overtime_day(frm);
 	}
 }

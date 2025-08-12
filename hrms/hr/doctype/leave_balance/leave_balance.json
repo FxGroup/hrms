@@ -21,7 +21,12 @@
   "overtime_end_date",
   "column_break_jqsf",
   "overtime_hours",
-  "overtime_minutes"
+  "overtime_minutes",
+  "application_details_section",
+  "leave_applications",
+  "column_break_zsdy",
+  "allocated_hours",
+  "allocated_minutes"
  ],
  "fields": [
   {
@@ -53,17 +58,8 @@
    "ignore_user_permissions": 1,
    "in_standard_filter": 1,
    "label": "Leave Type",
-   "options": "Time in Lieu"
-  },
-  {
-   "fieldname": "amended_from",
-   "fieldtype": "Link",
-   "label": "Amended From",
-   "no_copy": 1,
-   "options": "Leave Balance",
-   "print_hide": 1,
-   "read_only": 1,
-   "search_index": 1
+   "options": "Time in Lieu",
+   "reqd": 1
   },
   {
    "fieldname": "balance_details_section",
@@ -74,13 +70,15 @@
    "fieldname": "payroll_start_date",
    "fieldtype": "Date",
    "label": "Payroll Start Date",
-   "read_only": 1
+   "read_only": 1,
+   "reqd": 1
   },
   {
    "fieldname": "payroll_end_date",
    "fieldtype": "Date",
    "label": "Payroll End Date",
-   "read_only": 1
+   "read_only": 1,
+   "reqd": 1
   },
   {
    "fieldname": "column_break_nlgv",
@@ -90,13 +88,15 @@
    "fieldname": "overtime_start_date",
    "fieldtype": "Date",
    "label": "Overtime Start Date",
-   "read_only": 1
+   "read_only": 1,
+   "reqd": 1
   },
   {
    "fieldname": "overtime_end_date",
    "fieldtype": "Date",
    "label": "Overtime End Date",
-   "read_only": 1
+   "read_only": 1,
+   "reqd": 1
   },
   {
    "fieldname": "column_break_jqsf",
@@ -106,14 +106,17 @@
    "fieldname": "overtime_hours",
    "fieldtype": "Float",
    "label": "Overtime Hours",
-   "read_only": 1
+   "non_negative": 1,
+   "read_only": 1,
+   "reqd": 1
   },
   {
    "fieldname": "overtime_minutes",
    "fieldtype": "Select",
    "label": "Overtime Minutes",
    "options": "\n0\n15\n30\n45",
-   "read_only": 1
+   "read_only": 1,
+   "reqd": 1
   },
   {
    "default": "Overtime Application",
@@ -140,13 +143,52 @@
    "no_copy": 1,
    "options": "ref_doctype",
    "reqd": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Leave Balance",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "application_details_section",
+   "fieldtype": "Section Break",
+   "label": "Application Details"
+  },
+  {
+   "fieldname": "column_break_zsdy",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "allocated_hours",
+   "fieldtype": "Float",
+   "label": "Total Allocated Hours",
+   "non_negative": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "allocated_minutes",
+   "fieldtype": "Float",
+   "label": "Total Allocated Minutes",
+   "non_negative": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "leave_applications",
+   "fieldtype": "Table",
+   "label": "Leave Applications",
+   "options": "Balance Allocation"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-08-12 13:47:45.237504",
+ "modified": "2025-08-12 14:34:50.834796",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Leave Balance",

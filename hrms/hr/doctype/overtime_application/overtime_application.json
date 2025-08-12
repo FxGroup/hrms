@@ -8,6 +8,7 @@
  "document_type": "Document",
  "engine": "InnoDB",
  "field_order": [
+  "connections_tab",
   "section_break_kcdj",
   "employee",
   "employee_name",
@@ -229,13 +230,19 @@
    "default": "1",
    "fieldname": "column_break_jpbo",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "connections_tab",
+   "fieldtype": "Tab Break",
+   "label": "Details",
+   "show_dashboard": 1
   }
  ],
  "grid_page_length": 50,
  "icon": "fa fa-calendar",
  "is_submittable": 1,
  "links": [],
- "modified": "2025-08-12 11:02:30.385022",
+ "modified": "2025-08-13 10:11:07.680865",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Overtime Application",

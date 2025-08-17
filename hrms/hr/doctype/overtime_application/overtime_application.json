@@ -8,6 +8,7 @@
  "document_type": "Document",
  "engine": "InnoDB",
  "field_order": [
+  "connections_tab",
   "section_break_kcdj",
   "employee",
   "employee_name",
@@ -221,21 +222,28 @@
   },
   {
    "fieldname": "total_overtime_minutes",
-   "fieldtype": "Float",
+   "fieldtype": "Select",
    "label": "Total Overtime Minutes",
+   "options": "0\n15\n20\n45",
    "read_only": 1
   },
   {
    "default": "1",
    "fieldname": "column_break_jpbo",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "connections_tab",
+   "fieldtype": "Tab Break",
+   "label": "Details",
+   "show_dashboard": 1
   }
  ],
  "grid_page_length": 50,
  "icon": "fa fa-calendar",
  "is_submittable": 1,
  "links": [],
- "modified": "2025-08-12 11:02:30.385022",
+ "modified": "2025-08-14 10:25:04.454358",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Overtime Application",

@@ -7,7 +7,7 @@
  "engine": "InnoDB",
  "field_order": [
   "link_type",
-  "dynamic_link_hcwi",
+  "link_name",
   "column_break_dolw",
   "allocated_hrs",
   "allocated_mins"
@@ -21,19 +21,7 @@
    "in_preview": 1,
    "in_standard_filter": 1,
    "label": "Link Type",
-   "options": "Leave Application",
-   "reqd": 1
-  },
-  {
-   "fieldname": "dynamic_link_hcwi",
-   "fieldtype": "Dynamic Link",
-   "in_filter": 1,
-   "in_global_search": 1,
-   "in_list_view": 1,
-   "in_preview": 1,
-   "in_standard_filter": 1,
-   "label": "Link",
-   "options": "link_type",
+   "options": "Leave Application\nOvertime Application",
    "reqd": 1
   },
   {
@@ -64,13 +52,25 @@
    "non_negative": 1,
    "options": "0\n15\n30\n45",
    "reqd": 1
+  },
+  {
+   "fieldname": "link_name",
+   "fieldtype": "Dynamic Link",
+   "in_filter": 1,
+   "in_global_search": 1,
+   "in_list_view": 1,
+   "in_preview": 1,
+   "in_standard_filter": 1,
+   "label": "Link",
+   "options": "link_type",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-08-12 14:34:18.644048",
+ "modified": "2025-08-15 11:22:37.246457",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Balance Allocation",

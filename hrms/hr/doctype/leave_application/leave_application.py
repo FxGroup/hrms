@@ -1604,35 +1604,44 @@ def get_leave_schedule(employee, from_date, to_date, half_day=0, half_day_date=N
 	leave_table = []
 	total_hours = 0
 	total_minutes = 0
+ 
+	holidays = get_holiday_dates_for_employee(employee=employee, start_date=from_date, end_date=to_date)
+	holiday_dates = []
+	if holidays:
+		for holiday_str in holidays:
+			holiday_dates.append(datetime.strptime(holiday_str, "%Y-%m-%d"))
 
 	current_day = from_dt
 	while current_day <= to_dt:
-		weekday_index = current_day.weekday()  # 0 = Monday, 6 = Sunday
-
+		weekday_index = current_day.weekday()
 		schedule_index = weekday_index if current_day < from_dt + timedelta(days=7) else weekday_index + 7
 		schedule_entry = default_schedule[schedule_index]
-
+		
 		if zero_hours:
 			leave_hours = 0
 			leave_minutes = 0
 		else:
 			leave_hours = schedule_entry["hours"]
 			leave_minutes = schedule_entry["minutes"]
-
+		
 		if half_day and current_day == half_day_dt:
 			leave_hours = partial_hours_leave
 			leave_minutes = partial_minutes_leave
-
+		
+		if current_day in holiday_dates:
+			leave_hours = 0
+			leave_minutes = 0
+		
 		leave_table.append({
 			"day": schedule_entry["day"],
 			"hours": leave_hours,
 			"minutes": str(leave_minutes)
 		})
-
-		if not zero_hours:
+		
+		if not zero_hours and current_day not in holiday_dates:
 			total_hours += float(leave_hours)
 			total_minutes += float(leave_minutes)
-   
+		
 		current_day += timedelta(days=1)
 
 	if not zero_hours:

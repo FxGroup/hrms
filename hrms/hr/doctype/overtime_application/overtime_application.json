@@ -224,7 +224,7 @@
    "fieldname": "total_overtime_minutes",
    "fieldtype": "Select",
    "label": "Total Overtime Minutes",
-   "options": "0\n15\n20\n45",
+   "options": "0\n15\n30\n45",
    "read_only": 1
   },
   {
@@ -243,7 +243,7 @@
  "icon": "fa fa-calendar",
  "is_submittable": 1,
  "links": [],
- "modified": "2025-08-14 10:25:04.454358",
+ "modified": "2025-09-16 12:51:44.859679",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Overtime Application",

@@ -112,6 +112,7 @@
    "fetch_from": "employee.leave_approver",
    "fieldname": "leave_approver",
    "fieldtype": "Link",
+   "in_standard_filter": 1,
    "label": "Leave Approver",
    "options": "User",
    "reqd": 1
@@ -131,6 +132,7 @@
   {
    "fieldname": "status",
    "fieldtype": "Select",
+   "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Status",
    "no_copy": 1,
@@ -186,6 +188,7 @@
    "fieldname": "to_date",
    "fieldtype": "Date",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "To Date",
    "reqd": 1,
    "search_index": 1
@@ -198,6 +201,7 @@
    "fieldname": "from_date",
    "fieldtype": "Date",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "From Date",
    "reqd": 1,
    "search_index": 1
@@ -209,7 +213,6 @@
   {
    "fieldname": "total_overtime_days",
    "fieldtype": "Float",
-   "in_standard_filter": 1,
    "label": "Total Overtime Days",
    "no_copy": 1,
    "read_only": 1
@@ -217,12 +220,14 @@
   {
    "fieldname": "total_overtime_hours",
    "fieldtype": "Float",
+   "in_list_view": 1,
    "label": "Total Overtime Hours",
    "read_only": 1
   },
   {
    "fieldname": "total_overtime_minutes",
    "fieldtype": "Select",
+   "in_list_view": 1,
    "label": "Total Overtime Minutes",
    "options": "0\n15\n30\n45",
    "read_only": 1
@@ -243,7 +248,7 @@
  "icon": "fa fa-calendar",
  "is_submittable": 1,
  "links": [],
- "modified": "2025-09-16 12:51:44.859679",
+ "modified": "2025-09-17 12:10:54.349434",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Overtime Application",

@@ -10,7 +10,10 @@
   "link_name",
   "column_break_dolw",
   "allocated_hrs",
-  "allocated_mins"
+  "allocated_mins",
+  "column_break_yblp",
+  "parent_hrs",
+  "parent_mmins"
  ],
  "fields": [
   {
@@ -64,13 +67,34 @@
    "label": "Link",
    "options": "link_type",
    "reqd": 1
+  },
+  {
+   "fieldname": "column_break_yblp",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "parent_hrs",
+   "fieldtype": "Data",
+   "label": "Link Balance Hours"
+  },
+  {
+   "fieldname": "parent_mmins",
+   "fieldtype": "Select",
+   "in_filter": 1,
+   "in_global_search": 1,
+   "in_list_view": 1,
+   "in_preview": 1,
+   "in_standard_filter": 1,
+   "label": "Link Balance Minutes",
+   "non_negative": 1,
+   "options": "0\n15\n30\n45"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-08-15 11:22:37.246457",
+ "modified": "2025-09-19 15:17:24.949227",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Balance Allocation",

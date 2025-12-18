@@ -20,6 +20,9 @@
   "column_break_zsdy",
   "allocated_hours",
   "allocated_minutes",
+  "column_break_eqdq",
+  "balance_hours",
+  "balance_minutes",
   "accruals_section",
   "balance_accruals",
   "allocations_section",
@@ -157,13 +160,38 @@
    "options": "0\n15\n30\n45",
    "read_only": 1,
    "reqd": 1
+  },
+  {
+   "fieldname": "column_break_eqdq",
+   "fieldtype": "Column Break"
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "0",
+   "fieldname": "balance_hours",
+   "fieldtype": "Float",
+   "label": "Balance Hours",
+   "non_negative": 1,
+   "read_only": 1,
+   "reqd": 1
+  },
+  {
+   "allow_on_submit": 1,
+   "default": "0",
+   "fieldname": "balance_minutes",
+   "fieldtype": "Select",
+   "label": "Balance Minutes",
+   "non_negative": 1,
+   "options": "0\n15\n30\n45",
+   "read_only": 1,
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-08-15 12:46:07.615322",
+ "modified": "2025-09-18 11:20:52.437351",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Leave Balance",

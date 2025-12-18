@@ -47,8 +47,8 @@ frappe.ui.form.on("Leave Application", {
 		}
 
 		frm.toggle_reqd("half_day_date", cint(frm.doc.half_day));
-
-		if (frm.doc.from_date && frm.doc.to_date) {
+		
+		if (!(frappe.user.has_role("Administrator") || frappe.user.has_role("HR Manager")) && (frm.doc.from_date && frm.doc.to_date)) {
 			validateDateRange(frm);
 		}
 	},

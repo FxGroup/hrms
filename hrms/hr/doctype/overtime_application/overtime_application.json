@@ -22,6 +22,7 @@
   "to_date",
   "section_break_acwx",
   "overtime_days",
+  "comments",
   "section_break_qwje",
   "total_overtime_days",
   "column_break_hnxq",
@@ -84,7 +85,7 @@
    "ignore_user_permissions": 1,
    "in_standard_filter": 1,
    "label": "Overtime Type",
-   "options": "Time in Lieu\nEncashment",
+   "options": "Time in Lieu",
    "reqd": 1,
    "search_index": 1
   },
@@ -112,6 +113,7 @@
    "fetch_from": "employee.leave_approver",
    "fieldname": "leave_approver",
    "fieldtype": "Link",
+   "in_standard_filter": 1,
    "label": "Leave Approver",
    "options": "User",
    "reqd": 1
@@ -131,6 +133,7 @@
   {
    "fieldname": "status",
    "fieldtype": "Select",
+   "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Status",
    "no_copy": 1,
@@ -186,6 +189,7 @@
    "fieldname": "to_date",
    "fieldtype": "Date",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "To Date",
    "reqd": 1,
    "search_index": 1
@@ -198,6 +202,7 @@
    "fieldname": "from_date",
    "fieldtype": "Date",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "From Date",
    "reqd": 1,
    "search_index": 1
@@ -209,7 +214,6 @@
   {
    "fieldname": "total_overtime_days",
    "fieldtype": "Float",
-   "in_standard_filter": 1,
    "label": "Total Overtime Days",
    "no_copy": 1,
    "read_only": 1
@@ -217,14 +221,16 @@
   {
    "fieldname": "total_overtime_hours",
    "fieldtype": "Float",
+   "in_list_view": 1,
    "label": "Total Overtime Hours",
    "read_only": 1
   },
   {
    "fieldname": "total_overtime_minutes",
    "fieldtype": "Select",
+   "in_list_view": 1,
    "label": "Total Overtime Minutes",
-   "options": "0\n15\n20\n45",
+   "options": "\n0\n15\n30\n45",
    "read_only": 1
   },
   {
@@ -237,13 +243,19 @@
    "fieldtype": "Tab Break",
    "label": "Details",
    "show_dashboard": 1
+  },
+  {
+   "fieldname": "comments",
+   "fieldtype": "Small Text",
+   "label": "Reason",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
  "icon": "fa fa-calendar",
  "is_submittable": 1,
  "links": [],
- "modified": "2025-08-14 10:25:04.454358",
+ "modified": "2025-09-29 15:41:49.223706",
  "modified_by": "Administrator",
  "module": "HR",
  "name": "Overtime Application",

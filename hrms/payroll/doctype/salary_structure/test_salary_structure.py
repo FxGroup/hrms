@@ -114,12 +114,12 @@ class TestSalaryStructure(FrappeTestCase):
 		salary_structure = make_salary_structure(
 			"Salary Structure Sample", "Monthly", currency=company_currency
 		)
-		employee = "test_assign_stucture@salary.com"
+		employee = "test_assign_structure@salary.com"
 		employee_doc_name = make_employee(employee)
-		# clear the already assigned stuctures
+		# clear the already assigned structures
 		frappe.db.sql(
 			"""delete from `tabSalary Structure Assignment` where employee=%s and salary_structure=%s """,
-			("test_assign_stucture@salary.com", salary_structure.name),
+			("test_assign_structure@salary.com", salary_structure.name),
 		)
 		# test structure_assignment
 		salary_structure.assign_salary_structure(
@@ -245,7 +245,7 @@ def create_salary_structure_assignment(
 	if not payroll_period:
 		payroll_period = create_payroll_period(company="_Test Company")
 
-	income_tax_slab = frappe.db.get_value("Income Tax Slab", {"currency": currency})
+	income_tax_slab = frappe.db.get_value("Income Tax Slab", {"currency": currency, "docstatus": 1})
 
 	if not income_tax_slab:
 		income_tax_slab = create_tax_slab(payroll_period, allow_tax_exemption=True, currency=currency)

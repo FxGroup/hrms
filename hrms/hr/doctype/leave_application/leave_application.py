@@ -860,8 +860,6 @@ class LeaveApplication(Document, PWANotificationsMixin):
 			if reports_to_email == "Administrator":
 				reports_to_email = "mitch@fxmed.co.nz"
 			message_to = get_message_to(self.employee, 3)
-			if (company == "RN Labs" or company == "Therahealth") and "lee-anne@rnlabs.com.au" not in message_to:
-				message_to.append("lee-anne@rnlabs.com.au")
 			for email in ["jyotsana@fxmed.co.nz", "ricky@fxmed.co.nz", reports_to_email]:
 				if email not in message_to and email != "amal@fxmed.co.nz":
 					message_to.append(email)

@@ -164,6 +164,10 @@ class LeaveApplication(Document, PWANotificationsMixin):
 		# notify leave applier about cancellation
 		if frappe.db.get_single_value("HR Settings", "send_leave_notification"):
 			self.notify_leave_approver()
+   
+		# if frappe.db.exists('Leave Balance', {"employee": self.employee, "leave_type": self.leave_type}) and self.workflow_state == "Approved":
+		# 	self.cancel_balance()
+   
 		# self.cancel_attendance()
 		self.db_set("workflow_state", "Cancelled")
 		self.publish_update()
@@ -201,6 +205,61 @@ class LeaveApplication(Document, PWANotificationsMixin):
 
 	def after_delete(self):
 		self.publish_update()
+  
+	# def before_save(self):
+	# 	if self.leave_type == "Time in Lieu":
+	# 		self.validate_leave_hours()
+  
+	# def validate_leave_hours(self):
+	# 	total_hours = int(self.total_leave_hours or 0)
+	# 	total_minutes = int(self.total_leave_minutes or 0)
+	# 	allocated_hours = int(self.allocated_hours or 0)
+	# 	allocated_minutes = int(self.allocated_minutes or 0)
+	# 	available_hours = int(self.avaliable_hours or 0)
+	# 	available_minutes = int(self.avaliable_minutes or 0)
+
+	# 	valid_minutes = [0, 15, 30, 45]
+	# 	if (total_minutes not in valid_minutes or 
+	# 		allocated_minutes not in valid_minutes or 
+	# 		available_minutes not in valid_minutes):
+	# 		frappe.throw(_('Minutes can only be 0, 15, 30, or 45'))
+
+	# 	total_time_in_minutes = (total_hours * 60) + total_minutes
+	# 	allocated_time_in_minutes = (allocated_hours * 60) + allocated_minutes
+	# 	available_time_in_minutes = (available_hours * 60) + available_minutes
+
+	# 	if available_time_in_minutes > 0 and allocated_time_in_minutes > available_time_in_minutes:
+	# 		frappe.throw(_('Allocated time cannot exceed available time'))
+
+	# 	if allocated_time_in_minutes > total_time_in_minutes:
+	# 		frappe.throw(_('Allocated time cannot exceed total leave time'))
+		
+	# 	if self.net_leave_hours != 0 or self.net_leave_minutes != 0:
+	# 		frappe.throw(_('Time in Lieu applications <b>must have a net balance of zero hours and minutes.</b><br><br>If your leave balance is insufficient to cover the requested time, please submit a separate application using a different leave type.')) 
+  
+	# def on_change(self):
+	# 	prev_doc = self.get_doc_before_save()
+	# 	if hasattr(self, 'status') and hasattr(prev_doc, 'status'):
+	# 		if prev_doc.status != self.status and self.status == "Approved":
+	# 			if self.leave_type == "Time in Lieu" and (self.allocated_balance_hours != 0 or int(self.allocated_balance_minutes) != 0):
+	# 				self.update_leave_balance()
+     
+	# def update_leave_balance(self):
+	# 	from hrms.hr.doctype.overtime_application.overtime_application import create_balance_allocation
+
+	# 	if not all([self.employee, self.leave_type, self.from_date, self.to_date, self.allocated_balance_hours]):
+	# 		frappe.throw("Missing required fields for leave balance creation")
+   
+	# 	if not frappe.db.exists("Employee", self.employee):
+	# 		frappe.throw(f"Employee {self.employee} does not exist")
+   
+	# 	if not frappe.db.exists('Leave Balance', {"employee": self.employee, "leave_type": self.leave_type}):
+	# 		frappe.throw(f"Unable to find any {self.leave_type} Leave Balance for this employee.")
+	# 		return
+
+	# 	balance_doc = frappe.get_doc('Leave Balance', {'employee': self.employee, 'leave_type': self.leave_type})
+	# 	create_balance_allocation(self.name, "Leave Application", balance_doc, self.allocated_balance_hours, str(self.allocated_balance_minutes))
+	# 	balance_doc.save(ignore_version=True, ignore_permissions=True)
 
 	def publish_update(self):
 		employee_user = frappe.db.get_value("Employee", self.employee, "user_id", cache=True)
@@ -742,6 +801,54 @@ class LeaveApplication(Document, PWANotificationsMixin):
 					"subject": subject,
 				}
 			)
+   
+	# def cancel_balance(self):
+	# 	balance_doc = frappe.get_doc("Leave Balance", {"employee": self.employee, "leave_type": self.leave_type})
+	
+	# 	allocation_to_remove = None
+	# 	for element in balance_doc.balance_allocations:
+	# 		if element.link_type == "Leave Application" and element.link_name == self.name:
+	# 			allocation_to_remove = element
+	# 			break
+	
+	# 	if not allocation_to_remove:
+	# 		frappe.msgprint("No matching balance allocations found to cancel.")
+	# 		return
+			
+	# 	balance_doc.balance_allocations.remove(allocation_to_remove)
+	
+	# 	total_allocated_minutes = 0
+	# 	for remaining_allocation in balance_doc.balance_allocations:
+	# 		allocation_hours = float(remaining_allocation.allocated_hrs or 0)
+	# 		allocation_mins = int(remaining_allocation.allocated_mins or 0)
+	# 		total_allocated_minutes += (allocation_hours * 60) + allocation_mins
+	
+	# 	new_allocated_hours = total_allocated_minutes // 60
+	# 	remaining_allocated_minutes = total_allocated_minutes % 60
+	
+	# 	valid_minutes = [0, 15, 30, 45]
+	# 	if remaining_allocated_minutes not in valid_minutes:
+	# 		remaining_allocated_minutes = min(valid_minutes, key=lambda x: abs(x - remaining_allocated_minutes))
+	
+	# 	balance_doc.allocated_hours = float(new_allocated_hours)
+	# 	balance_doc.allocated_minutes = str(int(remaining_allocated_minutes))
+	
+	# 	accrued_hours = float(balance_doc.accrued_hours or 0)
+	# 	accrued_minutes = int(balance_doc.accrued_minutes or 0)
+	
+	# 	balance_total_minutes = ((accrued_hours - new_allocated_hours) * 60) + (accrued_minutes - remaining_allocated_minutes)
+	# 	balance_hours = balance_total_minutes // 60
+	# 	balance_mins = balance_total_minutes % 60
+	
+	# 	balance_doc.balance_hours = float(balance_hours)
+	# 	balance_doc.balance_minutes = str(int(balance_mins))
+	
+	# 	try:
+	# 		balance_doc.save(ignore_permissions=True)
+	# 	except Exception as e:
+	# 		frappe.log_error(message=str(e)[:140], title="Leave Cancellation Error")
+	# 		frappe.msgprint(f"An error has occurred when attempting to cancel {balance_doc.name}.<br><br>{e}")
+	# 		raise
 
 	def notify_accounts(self):
 		try:
@@ -753,8 +860,6 @@ class LeaveApplication(Document, PWANotificationsMixin):
 			if reports_to_email == "Administrator":
 				reports_to_email = "mitch@fxmed.co.nz"
 			message_to = get_message_to(self.employee, 3)
-			if (company == "RN Labs" or company == "Therahealth") and "lee-anne@rnlabs.com.au" not in message_to:
-				message_to.append("lee-anne@rnlabs.com.au")
 			for email in ["jyotsana@fxmed.co.nz", "ricky@fxmed.co.nz", reports_to_email]:
 				if email not in message_to and email != "amal@fxmed.co.nz":
 					message_to.append(email)
@@ -1136,6 +1241,31 @@ def get_leave_balance_on(
 		return remaining_leaves
 	else:
 		return remaining_leaves.get("leave_balance")
+
+
+# @frappe.whitelist()
+# def get_overtime_balance(employee, leave_type):
+# 	"""Returns the employees current leave balance"""
+# 	leaveBalance = frappe.qb.DocType("Leave Balance")
+
+# 	query = (
+# 		frappe.qb.from_(leaveBalance)
+# 		.select(
+# 			leaveBalance.employee,
+# 			leaveBalance.ref_doctype,
+# 			leaveBalance.ref_name,
+# 			leaveBalance.balance_hours,
+# 			leaveBalance.balance_minutes,
+# 			leaveBalance.fully_allocated
+# 		)
+# 		.where(
+# 			(leaveBalance.employee == employee)
+# 			& (leaveBalance.fully_allocated == 0)
+# 			& (leaveBalance.leave_type == leave_type)
+# 		)
+# 	)
+
+# 	return query.run(as_dict=True)
 
 
 def get_leave_allocation_records(employee, date, leave_type=None):
@@ -1814,3 +1944,52 @@ def get_leave_range(employee, from_date, to_date, total_hours_leave, total_minut
 		"end_date": calculated_end_date.strftime("%Y-%m-%d"),
 		"adjusted_partial_day_date": updated_partial_day_date
 	}
+
+
+# @frappe.whitelist()
+# @frappe.validate_and_sanitize_search_inputs
+# def get_leave_types(doctype, txt, searchfield, start, page_len, filters):
+#     if not filters.get("employee"):
+#         frappe.throw(_("Please select Employee first."))
+    
+#     employee = filters.get("employee")
+#     conditions = []
+#     values = []
+    
+#     if txt:
+#         conditions.append("leave_type_name LIKE %s")
+#         values.append("%" + txt + "%")
+    
+#     where_clause = " AND ".join(conditions) if conditions else "1=1"
+    
+#     leave_types_query = """
+#         SELECT name, leave_type_name 
+#         FROM `tabLeave Type` 
+#         WHERE {where_clause}
+#         ORDER BY leave_type_name
+#         LIMIT %s OFFSET %s
+#     """.format(where_clause=where_clause)
+    
+#     values.extend([page_len, start])
+#     leave_types = frappe.db.sql(leave_types_query, values, as_dict=True)
+    
+#     filtered_leave_types = []
+    
+#     for leave_type in leave_types:
+#         if leave_type.leave_type_name == "Time in Lieu":
+#             leave_balance = frappe.db.get_value(
+#                 "Leave Balance",
+#                 {
+#                     "employee": employee,
+#                     "leave_type": leave_type.name
+#                 },
+#                 ["accrued_hours", "accrued_minutes"],
+#                 as_dict=True
+#             )
+            
+#             if leave_balance and (leave_balance.accrued_hours > 0 or int(leave_balance.accrued_minutes) > 0):
+#                 filtered_leave_types.append((leave_type.name, leave_type.leave_type_name))
+#         else:
+#             filtered_leave_types.append((leave_type.name, leave_type.leave_type_name))
+    
+#     return filtered_leave_types

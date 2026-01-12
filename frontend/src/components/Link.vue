@@ -4,7 +4,7 @@
 		size="sm"
 		v-model="value"
 		:placeholder="__('Select {0}', [__(doctype)])"
-		:options="options.data"
+		:options="options.data || []"
 		:class="disabled ? 'pointer-events-none' : ''"
 		:disabled="disabled"
 		@update:query="handleQueryUpdate"
@@ -72,6 +72,7 @@ const reloadOptions = (searchTextVal) => {
 		params: {
 			txt: searchTextVal,
 			doctype: props.doctype,
+			filters: props.filters
 		},
 	})
 	options.reload()
@@ -91,7 +92,7 @@ watch(
 	() => props.doctype,
 	() => {
 		if (!props.doctype || props.doctype === options.doctype) return
-		reloadOptions("")
+		reloadOptions(props.modelValue)
 	},
 	{ immediate: true }
 )

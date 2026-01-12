@@ -13,11 +13,21 @@ frappe.ui.form.on("Leave Application", {
 			};
 		});
 		frm.set_query("employee", erpnext.queries.employee);
+
+		// frm.set_query("leave_type", function () {
+		// 	return {
+		// 		query: "hrms.hr.doctype.leave_application.leave_application.get_leave_types",
+		// 		filters: {
+		// 			employee: frm.doc.employee,
+		// 			doctype: frm.doc.doctype,
+		// 		},
+		// 	};
+		// });
 	},
 
 	onload: function (frm) {
 		frm.toggle_display('section_break_7', frappe.user.has_role("Leave Approver") || frappe.user.has_role("HR Manager"));
-		
+
 		// Ignore cancellation of doctype on cancel all.
 		frm.ignore_doctypes_on_cancel_all = ["Leave Ledger Entry"];
 
@@ -96,6 +106,8 @@ frappe.ui.form.on("Leave Application", {
 	},
 
 	refresh: function (frm) {
+		// frm.toggle_display('time_in_lieu', ((frm.doc.avaliable_hours && frm.doc.avaliable_hours > 0) || (frm.doc.avaliable_minutes && frm.doc.avaliable_minutes > 0)));
+		// $(".grid-add-row").hide();
 		hrms.leave_utils.add_view_ledger_button(frm);
 		if (frm.is_new()) {
 			frm.trigger("calculate_total_days");
@@ -230,7 +242,7 @@ frappe.ui.form.on("Leave Application", {
 
 	partial_hours_leave(frm) {
 		let val = frm.doc.partial_hours_leave;
-	
+
 		if (val !== undefined && val !== null) {
 			val = Math.floor(Number(val));
 			if (isNaN(val) || val < 0) {
@@ -242,7 +254,7 @@ frappe.ui.form.on("Leave Application", {
 		} else {
 			frm.set_value('partial_hours_leave', 0);
 		}
-	
+
 		frm.trigger("calculate_total_days");
 	},
 
@@ -308,7 +320,6 @@ frappe.ui.form.on("Leave Application", {
 			});
 		}
 	},
-
 	calculate_total_days: function (frm) {
 		if (frm.doc.from_date && frm.doc.to_date && frm.doc.employee && frm.doc.leave_type) {
 			// server call is done to include holidays in leave days calculations
@@ -335,11 +346,11 @@ frappe.ui.form.on("Leave Application", {
 		}
 	},
 
-	set_work_days: function(frm) {
+	set_work_days: function (frm) {
 		if (frm.doc.total_leave_days) {
 			frm.clear_table('leave_days');
 		}
-		
+
 		frappe.call({
 			method: "hrms.hr.doctype.leave_application.leave_application.get_leave_schedule",
 			args: {
@@ -351,7 +362,7 @@ frappe.ui.form.on("Leave Application", {
 				partial_hours_leave: frm.doc.partial_hours_leave || 0,
 				partial_minutes_leave: frm.doc.partial_minutes_leave || 0
 			},
-			callback: function(r) {
+			callback: function (r) {
 				if (r && r.message) {
 					frm.set_value('leave_days', r.message.leave_table);
 					frm.set_value('total_leave_hours', r.message.total_leave_hours);
@@ -419,6 +430,84 @@ frappe.ui.form.on("Leave Application", {
 		frm.trigger("make_dashboard");
 		frm.trigger("get_leave_balance");
 	},
+
+	// before_save: function (frm) {
+	// 	if (frm.doc.leave_type && frm.doc.leave_type == "Time in Lieu") {
+	// 		frappe.validated = false;
+	// 		frm.trigger('get_overtime_balance');
+	// 		frappe.validated = true;
+	// 	}
+	// },
+	// total_leave_hours: function (frm) {
+	// 	calculate_net_totals(frm);
+	// },
+	// total_leave_minutes: function (frm) {
+	// 	calculate_net_totals(frm);
+	// },
+	// leave_type: function (frm) {
+	// 	if (frm.doc.leave_type && frm.doc.leave_type == "Time in Lieu") {
+	// 		frappe.call({
+	// 			method: "hrms.hr.doctype.leave_application.leave_application.get_overtime_balance",
+	// 			args: {
+	// 				employee: frm.doc.employee,
+	// 				leave_type: frm.doc.leave_type
+	// 			},
+	// 			callback: function (r) {
+	// 				if (!r.exc && r.message) {
+	// 					if (!r.message[0].fully_allocated) {
+	// 						frm.toggle_display('time_in_lieu', true);
+	// 						frm.set_value('avaliable_hours', r.message[0].balance_hours);
+	// 						frm.set_value('avaliable_minutes', r.message[0].balance_minutes);
+	// 						if (frm.doc.total_leave_hours) {
+	// 							frm.set_value('net_leave_hours', frm.doc.total_leave_hours);
+	// 						} else {
+	// 							frm.set_value('net_leave_hours', 0);
+	// 						}
+	// 						if (frm.doc.total_leave_minutes) {
+	// 							frm.set_value('net_leave_minutes', frm.doc.total_leave_minutes);
+	// 						} else {
+	// 							frm.set_value('net_leave_minutes', 0);
+	// 						}
+	// 					}
+	// 				}
+	// 			},
+	// 		});
+	// 	} else {
+	// 		frm.toggle_display('time_in_lieu', false);
+	// 		frm.set_value('avaliable_hours', undefined);
+	// 		frm.set_value('avaliable_minutes', undefined);
+	// 		frm.set_value('net_leave_hours', undefined);
+	// 		frm.set_value('net_leave_minutes', undefined);
+	// 	}
+	// },
+	// allocated_hours: function (frm) {
+	// 	calculate_net_totals(frm);
+	// },
+	// allocated_minutes: function (frm) {
+	// 	calculate_net_totals(frm);
+	// },
+	// net_leave_hours: function (frm) {
+	// 	let css = {};
+	// 	let hours_field = $(`div[data-fieldname="net_leave_hours"] .control-value`);
+	// 	if (frm.doc.net_leave_hours && frm.doc.net_leave_hours > 0) {
+	// 		css["color"] = "orange";
+	// 	} else {
+	// 		css["color"] = "green";
+	// 	}
+	// 	hours_field.css(css);
+	// },
+	// net_leave_minutes: function (frm) {
+	// 	let css = {};
+	// 	let minutes_field = $(`div[data-fieldname="net_leave_minutes"] .control-value`);
+
+	// 	if (frm.doc.net_leave_minutes && frm.doc.net_leave_minutes > 0) {
+	// 		css["color"] = "orange";
+	// 	} else {
+	// 		css["color"] = "green";
+	// 	}
+
+	// 	minutes_field.css(css);
+	// }
 });
 
 frappe.tour["Leave Application"] = [
@@ -474,7 +563,7 @@ function validateDateRange(frm) {
 				frm.toggle_display('total_leave_minutes', false);
 				return;
 			}
-			
+
 			frappe.validated = false;
 
 			const original_from = frm.doc.from_date;
@@ -556,3 +645,59 @@ function validateDateRange(frm) {
 		}
 	});
 }
+
+
+// function calculate_net_totals(frm) {
+// 	const totalHours = parseInt(frm.doc.total_leave_hours) || 0;
+// 	const totalMinutes = parseInt(frm.doc.total_leave_minutes) || 0;
+// 	const allocatedHours = parseInt(frm.doc.allocated_hours) || 0;
+// 	const allocatedMinutes = parseInt(frm.doc.allocated_minutes) || 0;
+// 	const availableMinutes = parseInt(frm.doc.available_minutes) || 0;
+
+// 	const validMinutes = [0, 15, 30, 45];
+// 	if (!validMinutes.includes(totalMinutes) ||
+// 		!validMinutes.includes(allocatedMinutes) ||
+// 		!validMinutes.includes(availableMinutes)) {
+// 		frappe.msgprint(__('Minutes can only be 0, 15, 30, or 45'));
+// 		return;
+// 	}
+
+// 	const totalTimeInMinutes = (totalHours * 60) + totalMinutes;
+// 	const allocatedTimeInMinutes = (allocatedHours * 60) + allocatedMinutes;
+// 	const netTimeInMinutes = totalTimeInMinutes - allocatedTimeInMinutes;
+
+// 	let netHours = Math.floor(Math.abs(netTimeInMinutes) / 60);
+// 	let netMinutes = Math.abs(netTimeInMinutes) % 60;
+
+// 	if (netTimeInMinutes < 0) {
+// 		netHours = -netHours;
+// 		if (netMinutes > 0) {
+// 			netHours -= 1;
+// 			netMinutes = 60 - netMinutes;
+// 		}
+// 	}
+
+// 	netMinutes = validMinutes.reduce((prev, curr) =>
+// 		Math.abs(curr - netMinutes) < Math.abs(prev - netMinutes) ? curr : prev
+// 	);
+// 	if (netHours < 0) {
+// 		if (frm.doc.avaliable_hours < frm.doc.total_leave_hours) {
+// 			frm.doc['allocated_hours'] = frm.doc.avaliable_hours;
+// 		} else {
+// 			frm.doc['allocated_hours'] = frm.doc.total_leave_hours;
+// 		}		frm.refresh_field('allocated_hours');
+// 		netHours = 0;
+		
+// 	}
+
+// 	if (netMinutes < 0) {
+// 		frm.doc['allocated_minutes'] = 0;
+// 		frm.refresh_field('allocated_minutes');
+// 		netMinutes = 0;
+// 	}
+
+// 	frm.set_value('allocated_balance_hours', allocatedHours);
+// 	frm.set_value('allocated_balance_minutes', allocatedMinutes);
+// 	frm.set_value('net_leave_hours', netHours);
+// 	frm.set_value('net_leave_minutes', netMinutes);
+// }

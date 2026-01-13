@@ -36,6 +36,7 @@ from hrms.hr.utils import (
 )
 from hrms.mixins.pwa_notifications import PWANotificationsMixin
 from hrms.utils import get_employee_email
+from hrms.utils.holiday_list import get_holiday_dates_between_range
 
 
 class LeaveDayBlockedError(frappe.ValidationError):
@@ -128,6 +129,9 @@ class LeaveApplication(Document, PWANotificationsMixin):
 
 	def before_cancel(self):
 		self.status = "Cancelled"
+
+	def on_discard(self):
+		self.db_set("status", "Cancelled")
 
 	def on_cancel(self):
 		self.create_leave_ledger_entry(submit=False)
@@ -364,7 +368,7 @@ class LeaveApplication(Document, PWANotificationsMixin):
 			select start_date, end_date from `tabSalary Slip`
 			where docstatus = 1 and employee = %s
 			and ((%s between start_date and end_date) or (%s between start_date and end_date))
-			order by modified desc limit 1
+			order by creation desc limit 1
 		""",
 			(self.employee, self.to_date, self.from_date),
 		)
@@ -598,13 +602,13 @@ class LeaveApplication(Document, PWANotificationsMixin):
 	def validate_attendance(self):
 		attendance_dates = frappe.get_all(
 			"Attendance",
-			filters={
-				"employee": self.employee,
-				"attendance_date": ("between", [self.from_date, self.to_date]),
-				"status": ("in", ["Present", "Work From Home"]),
-				"docstatus": 1,
-				"half_day_status": ("!=", "Absent"),
-			},
+			filters=[
+				["employee", "=", self.employee],
+				["attendance_date", "between", [self.from_date, self.to_date]],
+				["status", "in", ["Present", "Work From Home"]],
+				["docstatus", "=", 1],
+				["half_day_status", "!=", "Absent"],
+			],
 			fields=["name", "attendance_date"],
 			order_by="attendance_date",
 		)
@@ -1022,6 +1026,7 @@ def get_leave_allocation_records(employee, date, leave_type=None):
 	"""Returns the total allocated leaves and carry forwarded leaves based on ledger entries"""
 	Ledger = frappe.qb.DocType("Leave Ledger Entry")
 	LeaveAllocation = frappe.qb.DocType("Leave Allocation")
+	LeaveAdjustment = frappe.qb.DocType("Leave Adjustment")
 
 	cf_leave_case = frappe.qb.terms.Case().when(Ledger.is_carry_forward == "1", Ledger.leaves).else_(0)
 	sum_cf_leaves = Sum(cf_leave_case).as_("cf_leaves")
@@ -1031,8 +1036,10 @@ def get_leave_allocation_records(employee, date, leave_type=None):
 
 	query = (
 		frappe.qb.from_(Ledger)
-		.inner_join(LeaveAllocation)
+		.left_join(LeaveAllocation)
 		.on(Ledger.transaction_name == LeaveAllocation.name)
+		.left_join(LeaveAdjustment)
+		.on(Ledger.transaction_name == LeaveAdjustment.name)
 		.select(
 			sum_cf_leaves,
 			sum_new_leaves,
@@ -1044,7 +1051,10 @@ def get_leave_allocation_records(employee, date, leave_type=None):
 		.where(
 			(Ledger.from_date <= date)
 			& (Ledger.docstatus == 1)
-			& (Ledger.transaction_type == "Leave Allocation")
+			& (
+				(Ledger.transaction_type == "Leave Allocation")
+				| (Ledger.transaction_type == "Leave Adjustment")
+			)
 			& (Ledger.employee == employee)
 			& (Ledger.is_expired == 0)
 			& (Ledger.is_lwp == 0)
@@ -1055,10 +1065,13 @@ def get_leave_allocation_records(employee, date, leave_type=None):
 				# it's between the leave allocation's from and to date
 				| (
 					(Ledger.is_carry_forward == 1)
-					& (Ledger.to_date.between(LeaveAllocation.from_date, LeaveAllocation.to_date))
+					& (
+						Ledger.to_date.between(LeaveAllocation.from_date, LeaveAllocation.to_date)
+						| (Ledger.to_date.between(LeaveAdjustment.from_date, LeaveAdjustment.to_date))
+					)
 					# only consider cf leaves from current allocation
-					& (LeaveAllocation.from_date <= date)
-					& (date <= LeaveAllocation.to_date)
+					& ((LeaveAllocation.from_date <= date) | (LeaveAdjustment.from_date <= date))
+					& ((date <= LeaveAllocation.to_date) | (date <= LeaveAdjustment.to_date))
 				)
 			)
 		)
@@ -1069,7 +1082,6 @@ def get_leave_allocation_records(employee, date, leave_type=None):
 	query = query.groupby(Ledger.employee, Ledger.leave_type)
 
 	allocation_details = query.run(as_dict=True)
-
 	allocated_leaves = frappe._dict()
 	for d in allocation_details:
 		allocated_leaves.setdefault(
@@ -1100,7 +1112,7 @@ def get_leaves_pending_approval_for_period(
 			"from_date": ["between", (from_date, to_date)],
 			"to_date": ["between", (from_date, to_date)],
 		},
-		fields=["SUM(total_leave_days) as leaves"],
+		fields=[{"SUM": "total_leave_days", "as": "leaves"}],
 	)[0]
 	return leaves["leaves"] if leaves["leaves"] else 0.0
 
@@ -1274,17 +1286,8 @@ def get_leave_entries(employee, leave_type, from_date, to_date):
 @frappe.whitelist()
 def get_holidays(employee, from_date, to_date, holiday_list=None):
 	"""get holidays between two dates for the given employee"""
-	if not holiday_list:
-		holiday_list = get_holiday_list_for_employee(employee)
-
-	holidays = frappe.db.sql(
-		"""select count(distinct holiday_date) from `tabHoliday` h1, `tabHoliday List` h2
-		where h1.parent = h2.name and h1.holiday_date between %s and %s
-		and h2.name = %s""",
-		(from_date, to_date, holiday_list),
-	)[0][0]
-
-	return holidays
+	holidays = get_holiday_dates_between_range(employee, from_date, to_date)
+	return len(holidays)
 
 
 def is_lwp(leave_type):
@@ -1311,7 +1314,7 @@ def get_events(start, end, filters=None):
 		employee, company = employee.name, employee.company
 	else:
 		employee = ""
-		company = frappe.db.get_value("Global Defaults", None, "default_company")
+		company = frappe.db.get_single_value("Global Defaults", "default_company")
 
 	# show department leaves for employee
 	if "Employee" in frappe.get_roles():
@@ -1353,8 +1356,6 @@ def add_leaves(events, start, end, filters=None):
 		"docstatus",
 		"employee_name",
 		"leave_type",
-		"(1) as allDay",
-		"'Leave Application' as doctype",
 	]
 
 	show_leaves_of_all_members = frappe.db.get_single_value(
@@ -1364,9 +1365,10 @@ def add_leaves(events, start, end, filters=None):
 		leave_applications = frappe.get_all("Leave Application", filters=filters, fields=fields)
 	else:
 		leave_applications = frappe.get_list("Leave Application", filters=filters, fields=fields)
-
 	for d in leave_applications:
 		d["title"] = f"{d['employee_name']} ({d['leave_type']})"
+		d["allDay"] = 1
+		d["doctype"] = "Leave Application"
 		del d["employee_name"]
 		del d["leave_type"]
 		if d not in events:

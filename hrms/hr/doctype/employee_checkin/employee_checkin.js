@@ -51,6 +51,8 @@ frappe.ui.form.on("Employee Checkin", {
 							message: __("No valid shift found for log time"),
 							indicator: "orange",
 						});
+						frm.dirty();
+						frm.save();
 					}
 				},
 			});

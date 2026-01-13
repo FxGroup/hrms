@@ -31,7 +31,7 @@ frappe.ui.form.on("Employee Referral", {
 						ref_docname: cur_frm.doc.name,
 						docstatus: 1,
 					},
-					fields: ["count(name) as additional_salary_count"],
+					fields: [{ COUNT: "name", as: "additional_salary_count" }],
 				})
 				.then((data) => {
 					let additional_salary_count = data[0].additional_salary_count;
@@ -45,9 +45,11 @@ frappe.ui.form.on("Employee Referral", {
 		}
 	},
 	create_job_applicant: function (frm) {
-		frappe.model.open_mapped_doc({
+		frappe.call({
 			method: "hrms.hr.doctype.employee_referral.employee_referral.create_job_applicant",
-			frm: frm,
+			args: {
+				source_name: frm.docname,
+			},
 		});
 	},
 

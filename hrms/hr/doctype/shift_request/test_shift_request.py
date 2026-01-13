@@ -2,18 +2,24 @@
 # See license.txt
 
 import frappe
-from frappe.tests.utils import FrappeTestCase, change_settings
+from frappe.tests import change_settings
 from frappe.utils import add_days, nowdate
 
 from erpnext.setup.doctype.employee.test_employee import make_employee
 
 from hrms.hr.doctype.shift_request.shift_request import OverlappingShiftRequestError
 from hrms.hr.doctype.shift_type.test_shift_type import setup_shift_type
+from hrms.tests.utils import HRMSTestSuite
 
 test_dependencies = ["Shift Type"]
 
 
-class TestShiftRequest(FrappeTestCase):
+class TestShiftRequest(HRMSTestSuite):
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		cls.make_employees()
+
 	def setUp(self):
 		for doctype in ["Shift Request", "Shift Assignment", "Shift Type"]:
 			frappe.db.delete(doctype)
@@ -228,6 +234,22 @@ class TestShiftRequest(FrappeTestCase):
 				"status": "Approved",
 			}
 		).submit()
+
+	def test_status_on_discard(self):
+		setup_shift_type(shift_type="Day Shift")
+		employee = frappe.get_doc("Employee", "_T-Employee-00001")
+		user = "test_approver_emp@example.com"
+		make_employee(user, "_Test Company")
+
+		# set approver for employee
+		employee.reload()
+		employee.shift_request_approver = user
+		employee.save()
+
+		shift_request = make_shift_request(user, do_not_submit=True)
+		shift_request.discard()
+		shift_request.reload()
+		self.assertEqual(shift_request.status, "Cancelled")
 
 
 def set_shift_approver(department):

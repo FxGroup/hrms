@@ -2,15 +2,14 @@
 # See license.txt
 
 import frappe
-from frappe.tests.utils import FrappeTestCase, change_settings
+from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import add_days, add_months, floor, flt, get_datetime, get_first_day, getdate
 
 from erpnext.setup.doctype.employee.test_employee import make_employee
-from erpnext.setup.doctype.holiday_list.test_holiday_list import set_holiday_list
 
 from hrms.hr.doctype.attendance.attendance import mark_attendance
 from hrms.hr.doctype.expense_claim.test_expense_claim import get_payable_account
-from hrms.payroll.doctype.gratuity.gratuity import get_last_salary_slip
+from hrms.hr.doctype.holiday_list_assignment.test_holiday_list_assignment import assign_holiday_list
 from hrms.payroll.doctype.salary_slip.test_salary_slip import (
 	make_deduction_salary_component,
 	make_earning_salary_component,
@@ -22,7 +21,7 @@ from hrms.payroll.doctype.salary_structure.salary_structure import make_salary_s
 test_dependencies = ["Salary Component", "Salary Slip", "Account"]
 
 
-class TestGratuity(FrappeTestCase):
+class TestGratuity(IntegrationTestCase):
 	def setUp(self):
 		for dt in ["Gratuity", "Salary Slip", "Additional Salary"]:
 			frappe.db.delete(dt)
@@ -36,13 +35,11 @@ class TestGratuity(FrappeTestCase):
 			relieving_date=self.relieving_date,
 		)
 
-		make_earning_salary_component(
-			setup=True, test_tax=True, company_list=["_Test Company"], include_flexi_benefits=True
-		)
+		make_earning_salary_component(setup=True, test_tax=True, company_list=["_Test Company"])
 		make_deduction_salary_component(setup=True, test_tax=True, company_list=["_Test Company"])
 		make_holiday_list()
 
-	@set_holiday_list("Salary Slip Test Holiday List", "_Test Company")
+	@assign_holiday_list("Salary Slip Test Holiday List", "_Test Company")
 	def test_gratuity_based_on_current_slab_via_additional_salary(self):
 		"""
 		Range	|	Fraction
@@ -87,7 +84,7 @@ class TestGratuity(FrappeTestCase):
 		gratuity.reload()
 		self.assertEqual(gratuity.status, "Paid")
 
-	@set_holiday_list("Salary Slip Test Holiday List", "_Test Company")
+	@assign_holiday_list("Salary Slip Test Holiday List", "_Test Company")
 	def test_gratuity_based_on_all_previous_slabs_via_payment_entry(self):
 		"""
 		Range   |   Fraction
@@ -124,7 +121,10 @@ class TestGratuity(FrappeTestCase):
 		set_mode_of_payment_account()
 
 		gratuity = create_gratuity(
-			expense_account="Payment Account - _TC", mode_of_payment="Cash", employee=self.employee, rule=rule
+			expense_account="Payment Account - _TC",
+			mode_of_payment="Cash",
+			employee=self.employee,
+			rule=rule.name,
 		)
 
 		# work experience calculation
@@ -193,7 +193,7 @@ class TestGratuity(FrappeTestCase):
 		)
 		self.assertEqual(gratuity.amount, 190000.0)
 
-	@set_holiday_list("Salary Slip Test Holiday List", "_Test Company")
+	@assign_holiday_list("Salary Slip Test Holiday List", "_Test Company")
 	def test_settle_gratuity_via_fnf_statement(self):
 		from hrms.hr.doctype.full_and_final_statement.test_full_and_final_statement import (
 			create_full_and_final_statement,
@@ -242,6 +242,21 @@ class TestGratuity(FrappeTestCase):
 		gratuity.reload()
 		self.assertEqual(gratuity.status, "Unpaid")
 
+	def test_status_on_discard(self):
+		create_salary_slip(self.employee)
+		setup_gratuity_rule("Rule Under Limited Contract (UAE)")
+		set_mode_of_payment_account()
+		# create gratuity
+		gratuity = create_gratuity(
+			do_not_submit=True,
+			expense_account="Payment Account - _TC",
+			mode_of_payment="Cash",
+			employee=self.employee,
+		)
+		gratuity.discard()
+		gratuity.reload()
+		self.assertEqual(gratuity.status, "Cancelled")
+
 
 def setup_gratuity_rule(name: str) -> dict:
 	from hrms.regional.united_arab_emirates.setup import setup
@@ -257,7 +272,7 @@ def setup_gratuity_rule(name: str) -> dict:
 	return rule
 
 
-def create_gratuity(**args):
+def create_gratuity(do_not_submit=False, **args):
 	if args:
 		args = frappe._dict(args)
 	gratuity = frappe.new_doc("Gratuity")
@@ -275,6 +290,8 @@ def create_gratuity(**args):
 		gratuity.cost_center = args.cost_center or "Main - _TC"
 
 	gratuity.save()
+	if do_not_submit:
+		return gratuity
 	gratuity.submit()
 
 	return gratuity

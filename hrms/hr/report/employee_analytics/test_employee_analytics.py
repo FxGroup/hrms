@@ -1,14 +1,14 @@
 import frappe
 from frappe import _
 from frappe.desk.page.setup_wizard.setup_wizard import make_records
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 
 from erpnext.setup.doctype.employee.test_employee import make_employee
 
 from hrms.hr.report.employee_analytics.employee_analytics import execute
 
 
-class TestEmployeeAnalytics(FrappeTestCase):
+class TestEmployeeAnalytics(IntegrationTestCase):
 	@classmethod
 	def setUpClass(cls):
 		super().setUpClass()

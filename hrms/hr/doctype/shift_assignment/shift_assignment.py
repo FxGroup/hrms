@@ -274,7 +274,7 @@ def get_shift_type_timing(shift_types):
 	shift_timing_map = {}
 	data = frappe.get_all(
 		"Shift Type",
-		filters={"name": ("IN", shift_types)},
+		filters=[["name", "in", shift_types]],
 		fields=["name", "start_time", "end_time"],
 	)
 
@@ -290,6 +290,7 @@ def get_shift_for_time(shifts: list[dict], for_timestamp: datetime) -> dict:
 
 	for assignment in shifts:
 		shift_details = get_shift_details(assignment.shift_type, for_timestamp=for_timestamp)
+		shift_details.overtime_type = assignment.overtime_type or None
 
 		if _is_shift_outside_assignment_period(shift_details, assignment):
 			continue
@@ -397,7 +398,13 @@ def get_shifts_for_date(employee: str, for_timestamp: datetime) -> list[dict[str
 	assignment = frappe.qb.DocType("Shift Assignment")
 	return (
 		frappe.qb.from_(assignment)
-		.select(assignment.name, assignment.shift_type, assignment.start_date, assignment.end_date)
+		.select(
+			assignment.name,
+			assignment.shift_type,
+			assignment.start_date,
+			assignment.end_date,
+			assignment.overtime_type,
+		)
 		.where(
 			(assignment.employee == employee)
 			& (assignment.docstatus == 1)
@@ -622,6 +629,8 @@ def get_shift_details(shift_type_name: str, for_timestamp: datetime | None = Non
 
 	actual_start = start_datetime - timedelta(minutes=shift_type.begin_check_in_before_shift_start_time)
 	actual_end = end_datetime + timedelta(minutes=shift_type.allow_check_out_after_shift_end_time)
+	allow_overtime = shift_type.allow_overtime
+	overtime_type = shift_type.overtime_type
 
 	return frappe._dict(
 		{
@@ -630,6 +639,8 @@ def get_shift_details(shift_type_name: str, for_timestamp: datetime | None = Non
 			"end_datetime": end_datetime,
 			"actual_start": actual_start,
 			"actual_end": actual_end,
+			"allow_overtime": allow_overtime,
+			"overtime_type": overtime_type,
 		}
 	)
 
@@ -644,6 +655,8 @@ def get_shift_type(shift_type_name: str) -> dict:
 			"end_time",
 			"begin_check_in_before_shift_start_time",
 			"allow_check_out_after_shift_end_time",
+			"allow_overtime",
+			"overtime_type",
 		],
 		as_dict=1,
 	)

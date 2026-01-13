@@ -29,7 +29,12 @@
   "late_entry",
   "early_exit",
   "amended_from",
-  "modify_half_day_status"
+  "modify_half_day_status",
+  "overtime_section",
+  "overtime_type",
+  "actual_overtime_duration",
+  "column_break_idku",
+  "standard_working_hours"
  ],
  "fields": [
   {
@@ -219,6 +224,35 @@
    "fieldtype": "Check",
    "hidden": 1,
    "label": "modify_half_day_status"
+  },
+  {
+   "depends_on": "overtime_type",
+   "fieldname": "overtime_section",
+   "fieldtype": "Section Break",
+   "label": "Overtime"
+  },
+  {
+   "fieldname": "overtime_type",
+   "fieldtype": "Link",
+   "label": "Overtime Type",
+   "options": "Overtime Type",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_idku",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "standard_working_hours",
+   "fieldtype": "Float",
+   "label": "Standard Working Hours",
+   "read_only": 1
+  },
+  {
+   "fieldname": "actual_overtime_duration",
+   "fieldtype": "Float",
+   "label": "Actual Overtime Duration",
+   "read_only": 1
   }
  ],
  "icon": "fa fa-ok",
@@ -286,7 +320,7 @@
  ],
  "row_format": "Dynamic",
  "search_fields": "employee,employee_name,attendance_date,status",
- "sort_field": "modified",
+ "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
  "title_field": "employee_name",

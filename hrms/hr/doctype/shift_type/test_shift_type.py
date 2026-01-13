@@ -3,9 +3,10 @@
 from datetime import datetime, timedelta
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 from frappe.utils import (
 	add_days,
+	get_datetime,
 	get_time,
 	get_year_ending,
 	get_year_start,
@@ -14,15 +15,15 @@ from frappe.utils import (
 )
 
 from erpnext.setup.doctype.employee.test_employee import make_employee
-from erpnext.setup.doctype.holiday_list.test_holiday_list import set_holiday_list
 
+from hrms.hr.doctype.holiday_list_assignment.test_holiday_list_assignment import assign_holiday_list
 from hrms.hr.doctype.leave_application.test_leave_application import get_first_sunday
 from hrms.hr.doctype.shift_type.shift_type import update_last_sync_of_checkin
 from hrms.payroll.doctype.salary_slip.test_salary_slip import make_holiday_list
 from hrms.tests.test_utils import add_date_to_holiday_list
 
 
-class TestShiftType(FrappeTestCase):
+class TestShiftType(IntegrationTestCase):
 	def setUp(self):
 		frappe.db.delete("Shift Type")
 		frappe.db.delete("Shift Assignment")
@@ -32,6 +33,97 @@ class TestShiftType(FrappeTestCase):
 		from_date = get_year_start(getdate())
 		to_date = get_year_ending(getdate())
 		self.holiday_list = make_holiday_list(from_date=from_date, to_date=to_date)
+		make_holiday_list("_Test Half Day", from_date=from_date, to_date=to_date)
+
+	def test_auto_update_last_sync_of_checkin_for_single_day_shift(self):
+		shift_type = setup_shift_type()
+		shift_type.last_sync_of_checkin = None
+		shift_type.auto_update_last_sync = 1
+		shift_type.save()
+
+		employee = make_employee("test_employee_checkin@example.com", company="_Test Company")
+		date = getdate()
+		make_shift_assignment(shift_type.name, employee, date)
+
+		# case 1: last sync updates from none to shift end after the shift end time
+		frappe.flags.current_datetime = datetime.combine(getdate(), get_time("14:00:00"))
+		update_last_sync_of_checkin()
+		shift_type.reload()
+		# last sync should be updated to 13:00:00
+		self.assertEqual(shift_type.last_sync_of_checkin, datetime.combine(getdate(), get_time("13:01:00")))
+
+		# case 2: last sync doesn't update in the middle of the shift
+		frappe.flags.current_datetime = add_days(datetime.combine(getdate(), get_time("12:00:00")), 1)
+		update_last_sync_of_checkin()
+		shift_type.reload()
+		self.assertEqual(shift_type.last_sync_of_checkin, datetime.combine(getdate(), get_time("13:01:00")))
+
+	def test_auto_update_last_sync_of_checkin_for_shifts_spanning_two_days_due_to_buffer(self):
+		shift_type = setup_shift_type(
+			shift_type="_Test Extra Buffer Shift",
+			start_time="11:00:00",
+			end_time="19:00:00",
+			allow_check_out_after_shift_end_time=360,
+		)
+		shift_type.last_sync_of_checkin = None
+		shift_type.auto_update_last_sync = 1
+		shift_type.save()
+
+		employee = make_employee("test_employee_checkin3@example.com", company="_Test Company")
+		date = add_days(getdate(), -4)
+		make_shift_assignment(shift_type.name, employee, date)
+
+		# case 1: last sync updates from none to shift end after the shift end time
+		frappe.flags.current_datetime = datetime.combine(getdate(), get_time("02:00:00"))
+		update_last_sync_of_checkin()
+		shift_type.reload()
+		# last sync should be updated to 01:01:00
+		self.assertEqual(shift_type.last_sync_of_checkin, datetime.combine(getdate(), get_time("01:01:00")))
+
+		# case 2: last sync doesn't update in the middle of the shift
+		frappe.flags.current_datetime = datetime.combine(getdate(), get_time("19:00:00"))
+		update_last_sync_of_checkin()
+		shift_type.reload()
+		self.assertEqual(shift_type.last_sync_of_checkin, datetime.combine(getdate(), get_time("01:01:00")))
+
+	def test_auto_update_last_sync_of_checkin_for_two_day_shift(self):
+		shift_type = setup_shift_type(
+			shift_type="_Test Night Shift", start_time="22:00:00", end_time="06:00:00"
+		)
+		shift_type.last_sync_of_checkin = None
+		shift_type.auto_update_last_sync = 1
+		shift_type.save()
+
+		employee = make_employee("test_employee_checkin2@example.com", company="_Test Company")
+		date = add_days(getdate(), -4)
+		make_shift_assignment(shift_type.name, employee, date)
+
+		# case 1: last sync updates from none to shift end after the shift end time
+		frappe.flags.current_datetime = datetime.combine(getdate(), get_time("08:00:00"))
+		update_last_sync_of_checkin()
+		shift_type.reload()
+		# last sync should be updated to 07:01:00
+		self.assertEqual(shift_type.last_sync_of_checkin, datetime.combine(getdate(), get_time("07:01:00")))
+
+		# case 2: last sync doesn't update in the middle of the shift
+		frappe.flags.current_datetime = add_days(datetime.combine(getdate(), get_time("01:00:00")), 1)
+		update_last_sync_of_checkin()
+		shift_type.reload()
+		self.assertEqual(shift_type.last_sync_of_checkin, datetime.combine(getdate(), get_time("07:01:00")))
+
+	def test_auto_update_last_sync_of_checkin_when_when_job_runs_on_the_next_day(self):
+		shift_type = setup_shift_type(shift_type="Test Long Shift", start_time="9:00:00", end_time="18:00:00")
+		shift_type.allow_check_out_after_shift_end_time = 330
+		shift_type.last_sync_of_checkin = None
+		shift_type.auto_update_last_sync = 1
+		shift_type.save()
+
+		frappe.flags.current_datetime = datetime.combine(add_days(getdate(), 1), get_time("00:01:00"))
+		update_last_sync_of_checkin()
+
+		shift_type.reload()
+
+		self.assertEqual(shift_type.last_sync_of_checkin, datetime.combine(getdate(), get_time("23:31:00")))
 
 	def test_auto_update_last_sync_of_checkin_for_single_day_shift(self):
 		shift_type = setup_shift_type()
@@ -345,7 +437,7 @@ class TestShiftType(FrappeTestCase):
 		attendance = frappe.db.get_value("Attendance", {"shift": shift_type.name}, "status")
 		self.assertEqual(attendance, "Absent")
 
-	@set_holiday_list("Salary Slip Test Holiday List", "_Test Company")
+	@assign_holiday_list("Salary Slip Test Holiday List", "_Test Company")
 	def test_mark_auto_attendance_on_holiday_enabled(self):
 		from hrms.hr.doctype.employee_checkin.test_employee_checkin import make_checkin
 
@@ -374,7 +466,7 @@ class TestShiftType(FrappeTestCase):
 		)
 		self.assertEqual(attendance, "Present")
 
-	@set_holiday_list("Salary Slip Test Holiday List", "_Test Company")
+	@assign_holiday_list("Salary Slip Test Holiday List", "_Test Company")
 	def test_mark_auto_attendance_on_holiday_disabled(self):
 		from hrms.hr.doctype.employee_checkin.test_employee_checkin import make_checkin
 
@@ -589,7 +681,7 @@ class TestShiftType(FrappeTestCase):
 		)
 		self.assertEqual(attendance, "Present")
 
-	@set_holiday_list("Salary Slip Test Holiday List", "_Test Company")
+	@assign_holiday_list("Salary Slip Test Holiday List", "_Test Company")
 	def test_skip_marking_absent_on_a_holiday(self):
 		employee = make_employee("test_employee_checkin@example.com", company="_Test Company")
 		shift_type = setup_shift_type(shift_type="Test Absent with no Attendance")
@@ -913,11 +1005,63 @@ class TestShiftType(FrappeTestCase):
 		self.assertEqual(attendance.status, "Present")
 		self.assertEqual(attendance.working_hours, 4.75)
 
+	def test_working_hours_threshold_for_half_day_holiday(self):
+		from hrms.hr.doctype.employee_checkin.test_employee_checkin import make_checkin
+
+		shift = setup_shift_type(
+			start_time="10:00:00",
+			end_time="18:00:00",
+			working_hours_threshold_for_half_day=6,
+			working_hours_threshold_for_absent=3,
+			holiday_list="_Test Half Day",
+		)
+		employee1 = make_employee(
+			"test_working_hours@example.com", company="_Test Company", default_shift=shift.name
+		)
+		employee2 = make_employee(
+			"test_working_hours2@example.com", company="_Test Company", default_shift=shift.name
+		)
+		employee3 = make_employee(
+			"test_working_hours3@example.com", company="_Test Company", default_shift=shift.name
+		)
+
+		add_date_to_holiday_list(getdate(), "_Test Half Day", is_half_day=1)
+		# employee1 worked for 4 hours which is full threshold on half day
+		make_checkin(employee1, datetime.combine(getdate(), get_time("10:00:00")))
+		make_checkin(employee1, datetime.combine(getdate(), get_time("14:00:00")))
+
+		# employee2 worked for 2 hours less than half day's threshold on half day
+		make_checkin(employee2, datetime.combine(getdate(), get_time("10:00:00")))
+		make_checkin(employee2, datetime.combine(getdate(), get_time("12:00:00")))
+
+		# employee3 worked for 1 hour, less than the threshold for absent on half day
+		make_checkin(employee3, datetime.combine(getdate(), get_time("10:00:00")))
+		make_checkin(employee3, datetime.combine(getdate(), get_time("11:00:00")))
+
+		shift.process_auto_attendance()
+		attendance1 = frappe.get_doc(
+			"Attendance", {"employee": employee1, "shift": shift.name, "attendance_date": getdate()}
+		)
+		self.assertEqual(attendance1.working_hours, 4.00)
+		self.assertEqual(attendance1.status, "Present")
+
+		attendance2 = frappe.get_doc(
+			"Attendance", {"employee": employee2, "shift": shift.name, "attendance_date": getdate()}
+		)
+		self.assertEqual(attendance2.working_hours, 2)
+		self.assertEqual(attendance2.status, "Half Day")
+
+		attendance3 = frappe.get_doc(
+			"Attendance", {"employee": employee3, "shift": shift.name, "attendance_date": getdate()}
+		)
+		self.assertEqual(attendance3.working_hours, 1)
+		self.assertEqual(attendance3.status, "Absent")
+
 
 def setup_shift_type(**args):
 	args = frappe._dict(args)
 	date = getdate()
-	if not frappe.db.exists("Shift Type", args.shift_type):
+	if not frappe.db.get_value("Shift Type", args.shift_type):
 		shift_type = frappe.get_doc(
 			{
 				"doctype": "Shift Type",
@@ -930,8 +1074,10 @@ def setup_shift_type(**args):
 				"begin_check_in_before_shift_start_time": args.begin_check_in_before_shift_start_time or 60,
 				"allow_check_out_after_shift_end_time": args.allow_check_out_after_shift_end_time or 60,
 				"process_attendance_after": add_days(date, -2),
-				"last_sync_of_checkin": now_datetime() + timedelta(days=1),
-				"mark_auto_attendance_on_holidays": args.mark_auto_attendance_on_holidays or False,
+				"last_sync_of_checkin": args.last_sync_of_checkin or now_datetime() + timedelta(days=1),
+				"mark_auto_attendance_on_holidays": args.mark_auto_attendance_on_holidays or 0,
+				"allow_overtime": args.allow_overtime or 0,
+				"overtime_type": args.overtime_type or None,
 			}
 		)
 	else:

@@ -199,7 +199,7 @@ class Gratuity(AccountsController):
 			lwp_leave_types = frappe.get_all("Leave Type", filters={"is_lwp": 1}, pluck="name")
 			filters["leave_type"] = ("IN", lwp_leave_types)
 
-		record = frappe.get_all("Attendance", filters=filters, fields=["COUNT(*) as total_lwp"])
+		record = frappe.get_all("Attendance", filters=filters, fields=[{"COUNT": "*", "as": "total_lwp"}])
 		return record[0].total_lwp if len(record) else 0
 
 	def get_gratuity_amount(self, experience: float) -> float:
@@ -311,6 +311,9 @@ class Gratuity(AccountsController):
 
 	def _is_experience_beyond_slab(self, slab: dict, experience: float) -> bool:
 		return bool(slab.from_year < experience and (slab.to_year < experience and slab.to_year != 0))
+
+	def on_discard(self):
+		self.db_set("status", "Cancelled")
 
 
 def get_last_salary_slip(employee: str) -> dict | None:

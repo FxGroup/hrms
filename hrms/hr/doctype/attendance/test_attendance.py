@@ -4,7 +4,7 @@
 from datetime import datetime
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 from frappe.utils import (
 	add_days,
 	add_months,
@@ -27,10 +27,8 @@ from hrms.hr.doctype.attendance.attendance import (
 )
 from hrms.tests.test_utils import get_first_sunday
 
-test_records = frappe.get_test_records("Attendance")
 
-
-class TestAttendance(FrappeTestCase):
+class TestAttendance(IntegrationTestCase):
 	def setUp(self):
 		from hrms.payroll.doctype.salary_slip.test_salary_slip import make_holiday_list
 
@@ -38,6 +36,7 @@ class TestAttendance(FrappeTestCase):
 		to_date = get_year_ending(getdate())
 		self.holiday_list = make_holiday_list(from_date=from_date, to_date=to_date)
 		frappe.db.delete("Attendance")
+		frappe.db.delete("Employee Checkin")
 
 	def test_duplicate_attendance(self):
 		employee = make_employee("test_duplicate_attendance@example.com", company="_Test Company")
@@ -179,7 +178,6 @@ class TestAttendance(FrappeTestCase):
 		employee = make_employee(
 			"test_unmarked_days@example.com", date_of_joining=add_days(attendance_date, -1)
 		)
-		frappe.db.set_value("Employee", employee, "holiday_list", self.holiday_list)
 
 		mark_attendance(employee, attendance_date, "Present")
 
@@ -226,8 +224,10 @@ class TestAttendance(FrappeTestCase):
 		from hrms.hr.doctype.employee_checkin.test_employee_checkin import make_checkin
 		from hrms.hr.doctype.shift_type.test_shift_type import setup_shift_type
 
-		shift = setup_shift_type(shift_type="Test Duplicate", start_time="08:00:00", end_time="17:00:00")
-		employee = make_employee("test_duplicate@attendance.com", default_shift=shift.name)
+		shift = setup_shift_type(shift_type="Shift 1", start_time="08:00:00", end_time="17:00:00")
+		employee = make_employee(
+			"test_duplicate@attendance.com", company="_Test Company", default_shift=shift.name
+		)
 		mark_attendance(employee, getdate(), "Half Day", shift=shift.name, half_day_status="Absent")
 		make_checkin(employee, datetime.combine(getdate(), get_time("14:00:00")))
 		shift.process_auto_attendance()

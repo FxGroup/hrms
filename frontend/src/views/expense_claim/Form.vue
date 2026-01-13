@@ -12,6 +12,7 @@
 				:tabs="tabs"
 				:showAttachmentView="true"
 				@validateForm="validateForm"
+				:showDownloadPDFButton="true"
 			>
 				<!-- Child Tables -->
 				<template #expenses="{ isFormReadOnly }">
@@ -42,6 +43,7 @@
 						:currency="currency"
 						:isReadOnly="isReadOnly || isFormReadOnly"
 					/>
+			
 				</template>
 			</FormView>
 		</ion-content>

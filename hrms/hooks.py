@@ -6,13 +6,15 @@ app_email = "contact@frappe.io"
 app_license = "GNU General Public License (v3)"
 required_apps = ["frappe/erpnext"]
 source_link = "http://github.com/frappe/hrms"
+app_logo_url = "/assets/hrms/images/frappe-hr-logo.svg"
+app_home = "/desk/people"
 
 add_to_apps_screen = [
 	{
 		"name": "hrms",
 		"logo": "/assets/hrms/images/frappe-hr-logo.svg",
 		"title": "Frappe HR",
-		"route": "/app/hr",
+		"route": "/desk/people",
 		"has_permission": "hrms.hr.utils.check_app_permission",
 	}
 ]
@@ -246,7 +248,7 @@ scheduler_events = {
 	"monthly": ["hrms.controllers.employee_reminders.send_reminders_in_advance_monthly"],
 }
 
-advance_payment_doctypes = ["Leave Encashment", "Gratuity", "Employee Advance"]
+advance_payment_payable_doctypes = ["Leave Encashment", "Gratuity", "Employee Advance"]
 
 invoice_doctypes = ["Expense Claim"]
 
@@ -368,3 +370,7 @@ company_data_to_be_ignored = [
 	"Employee Onboarding Template",
 	"Employee Separation Template",
 ]
+
+# List of apps whose translatable strings should be excluded from this app's translations.
+ignore_translatable_strings_from = ["frappe", "erpnext"]
+employee_holiday_list = ["hrms.utils.holiday_list.get_holiday_list_for_employee"]

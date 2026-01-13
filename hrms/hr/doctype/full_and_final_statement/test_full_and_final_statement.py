@@ -2,7 +2,7 @@
 # See license.txt
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, today
 
 from erpnext.assets.doctype.asset.test_asset import create_asset_data
@@ -10,7 +10,7 @@ from erpnext.setup.doctype.employee.test_employee import make_employee
 from erpnext.stock.doctype.purchase_receipt.test_purchase_receipt import make_purchase_receipt
 
 
-class TestFullandFinalStatement(FrappeTestCase):
+class TestFullandFinalStatement(IntegrationTestCase):
 	def setUp(self):
 		for dt in ["Full and Final Statement", "Asset", "Asset Movement", "Asset Movement Item"]:
 			frappe.db.delete(dt)
@@ -70,6 +70,11 @@ class TestFullandFinalStatement(FrappeTestCase):
 		self.assertEqual(debit_entry.debit_in_account_currency, 150000.0)
 		self.assertEqual(debit_entry.reference_type, "Full and Final Statement")
 		self.assertEqual(debit_entry.reference_name, self.fnf.name)
+
+	def test_status_on_discard(self):
+		self.fnf.discard()
+		self.fnf.reload()
+		self.assertEqual(self.fnf.status, "Cancelled")
 
 
 def create_full_and_final_statement(employee):

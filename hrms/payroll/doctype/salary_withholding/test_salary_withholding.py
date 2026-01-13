@@ -2,7 +2,7 @@
 # See license.txt
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 from frappe.utils import getdate
 
 from erpnext.setup.doctype.employee.test_employee import make_employee
@@ -18,7 +18,7 @@ MONTH_2_START = getdate("2024-02-01")
 MONTH_2_END = getdate("2024-02-29")
 
 
-class TestSalaryWithholding(FrappeTestCase):
+class TestSalaryWithholding(IntegrationTestCase):
 	def setUp(self):
 		for dt in [
 			"Salary Withholding",
@@ -137,6 +137,12 @@ class TestSalaryWithholding(FrappeTestCase):
 	def _get_payroll_employee_row(self, payroll_entry: dict) -> dict | None:
 		payroll_entry.reload()
 		return next(employee for employee in payroll_entry.employees if employee.employee == self.employee1)
+
+	def test_status_on_discard(self):
+		salary_withholding = create_salary_withholding(self.employee1, getdate())
+		salary_withholding.discard()
+		salary_withholding.reload()
+		self.assertEqual(salary_withholding.status, "Cancelled")
 
 
 def create_salary_withholding(employee: str, from_date: str, number_of_withholding_cycles: int = 0):

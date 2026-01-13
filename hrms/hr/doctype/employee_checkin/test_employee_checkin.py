@@ -4,7 +4,7 @@
 from datetime import datetime, timedelta
 
 import frappe
-from frappe.tests.utils import FrappeTestCase, change_settings
+from frappe.tests import IntegrationTestCase, change_settings
 from frappe.utils import (
 	add_days,
 	get_time,
@@ -30,15 +30,41 @@ from hrms.hr.doctype.shift_type.test_shift_type import make_shift_assignment, se
 from hrms.payroll.doctype.salary_slip.test_salary_slip import make_holiday_list, make_leave_application
 
 
-class TestEmployeeCheckin(FrappeTestCase):
+class TestEmployeeCheckin(IntegrationTestCase):
 	def setUp(self):
 		frappe.db.delete("Shift Type")
 		frappe.db.delete("Shift Assignment")
 		frappe.db.delete("Employee Checkin")
+		frappe.db.set_single_value("HR Settings", "allow_geolocation_tracking", 0)
 
-		from_date = get_year_start(getdate())
-		to_date = get_year_ending(getdate())
-		self.holiday_list = make_holiday_list(from_date=from_date, to_date=to_date)
+	def test_geolocation_tracking(self):
+		employee = make_employee("test_add_log_based_on_employee_field@example.com")
+		checkin = make_checkin(employee)
+		checkin.latitude = 23.31773
+		checkin.longitude = 66.82876
+		checkin.save()
+
+		# geolocation tracking is disabled
+		self.assertIsNone(checkin.geolocation)
+
+		frappe.db.set_single_value("HR Settings", "allow_geolocation_tracking", 1)
+
+		checkin.save()
+		self.assertEqual(
+			checkin.geolocation,
+			frappe.json.dumps(
+				{
+					"type": "FeatureCollection",
+					"features": [
+						{
+							"type": "Feature",
+							"properties": {},
+							"geometry": {"type": "Point", "coordinates": [66.82876, 23.31773]},
+						}
+					],
+				}
+			),
+		)
 
 		frappe.db.set_single_value("HR Settings", "allow_geolocation_tracking", 0)
 
@@ -881,7 +907,7 @@ def make_n_checkins(employee, n, hours_to_reverse=1):
 	return logs
 
 
-def make_checkin(employee, time=None, latitude=None, longitude=None):
+def make_checkin(employee, time=None, latitude=None, longitude=None, log_type="IN"):
 	if not time:
 		time = now_datetime()
 
@@ -891,7 +917,7 @@ def make_checkin(employee, time=None, latitude=None, longitude=None):
 			"employee": employee,
 			"time": time,
 			"device_id": "device1",
-			"log_type": "IN",
+			"log_type": log_type,
 			"latitude": latitude,
 			"longitude": longitude,
 		}

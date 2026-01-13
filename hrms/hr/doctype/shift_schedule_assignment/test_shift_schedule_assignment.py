@@ -2,7 +2,7 @@
 # See license.txt
 
 import frappe
-from frappe.tests.utils import FrappeTestCase
+from frappe.tests import IntegrationTestCase
 from frappe.utils import add_days, getdate
 
 from erpnext.setup.doctype.employee.test_employee import make_employee
@@ -10,12 +10,12 @@ from erpnext.setup.doctype.employee.test_employee import make_employee
 from hrms.hr.doctype.shift_schedule.shift_schedule import get_or_insert_shift_schedule
 from hrms.hr.doctype.shift_type.test_shift_type import setup_shift_type
 
-# On FrappeTestCase, the doctype test records and all
+# On IntegrationTestCase, the doctype test records and all
 # link-field test record depdendencies are recursively loaded
 # Use these module variables to add/remove to/from that list
 
 
-class TestShiftScheduleAssignment(FrappeTestCase):
+class TestShiftScheduleAssignment(IntegrationTestCase):
 	def setUp(self):
 		for dt in ["Shift Type", "Shift Schedule", "Shift Schedule Assignment", "Shift Assignment"]:
 			frappe.db.delete(dt)

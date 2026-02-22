@@ -538,9 +538,12 @@ class LeaveApplication(Document, PWANotificationsMixin):
 
 			if self.total_leave_days <= 0:
 				frappe.throw(
-					_(
-						"The day(s) on which you are applying for leave are holidays. You need not apply for leave."
-					)
+					f"<b>Invalid Leave Application</b><br><br>"
+					f"The day(s) on which you are applying for leave are holidays or this employee does not have work hours on this day.<br><br>"
+					f"<b>Possible reasons:</b><br>"
+					f"• The selected dates fall on public holidays<br>"
+					f"• The employee has no scheduled work hours on these days<br><br>"
+					f"<b>To Fix:</b> Please select different dates or review the employee's work schedule. You need not apply for leave on these days."
 				)
 
 			if not is_lwp(self.leave_type):

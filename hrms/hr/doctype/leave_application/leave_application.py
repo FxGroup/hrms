@@ -539,7 +539,7 @@ class LeaveApplication(Document, PWANotificationsMixin):
 			if self.total_leave_days <= 0:
 				frappe.throw(
 					_(
-						"The day(s) on which you are applying for leave are holidays. You need not apply for leave."
+						"The day(s) on which you are applying for leave are holidays or this employee does not have work hours on this day. You need not apply for leave."
 					)
 				)
 

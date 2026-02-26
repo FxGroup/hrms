@@ -1783,7 +1783,12 @@ def get_leave_schedule(employee, from_date, to_date, half_day=0, half_day_date=N
 	if not default_schedule:
 		site = get_site_name()
 		url = f"https://{site}/app/employee/{emp_doc.name}"
-		frappe.throw(f"<a href='{url}'><b>{emp_doc.employee_name}'s</b></a> employee record is missing it's work day schedule, which is required to process this leave application.<br><br>Please contact the accounts team to update the work day schedule and try again.")
+		frappe.throw(
+			f"<b>Missing Work Day Schedule</b><br><br>"
+			f"<a href='{url}'><b>{emp_doc.employee_name}'s</b></a> employee record is missing its work day schedule, which is required to process this leave application.<br><br>"
+			f"<b>To Fix:</b> Please contact the accounts team to update the work day schedule on this employee document and try again.",
+			title="Error"
+		)
 		return
 
 	from_dt = datetime.strptime(from_date, "%Y-%m-%d")

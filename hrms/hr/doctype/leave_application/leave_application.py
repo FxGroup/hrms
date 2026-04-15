@@ -96,6 +96,9 @@ class LeaveApplication(Document, PWANotificationsMixin):
 		validate_active_employee(self.employee)
 		set_employee_name(self)
 		self.validate_dates()
+		if hasattr(self, 'workflow_state') and self.workflow_state == "Approved":
+			self.validate_payroll_period_action()
+   
 		self.validate_balance_leaves()
 		self.validate_leave_overlap()
 		self.validate_max_days()
@@ -113,6 +116,31 @@ class LeaveApplication(Document, PWANotificationsMixin):
 		share_doc_with_approver(self, self.leave_approver)
 		self.publish_update()
 		self.notify_approval_status()
+
+	def validate_payroll_period_action(self):
+		payroll_start_str = frappe.db.get_value("Payroll Settings", "Payroll Settings", "payroll_start")
+		if not payroll_start_str:
+			return
+
+		payroll_start = getdate(payroll_start_str)
+		if not (self.to_date and getdate(self.to_date) < payroll_start):
+			return
+
+		allowed_roles = ["HR Manager", "Administrator"]
+		user_roles = frappe.get_roles(frappe.session.user)
+		if not any(role in user_roles for role in allowed_roles):
+			frappe.throw(
+				_(
+					"<b>This application was submitted in a previous payroll period and therefore cannot be "
+					"approved within this payroll cycle.</b><br><br>"
+					"Please cancel and re-raise this application within the current payroll period of "
+					"<b>{0}</b> onwards.<br><br>"
+					"If you have any issues, please reach out to the accounts team."
+				).format(
+					formatdate(payroll_start_str),
+				),
+				title=_("Invalid Leave Application"),
+			)
 
 	def on_submit(self):
 		if self.status in ["Open", "Cancelled"]:
